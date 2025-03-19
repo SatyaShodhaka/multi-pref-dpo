@@ -1,9 +1,3 @@
-# This file is the CPSFT training process.
-# Author: Yiju Guo
-# Date: 2024-01
-# Copyright (c) RUCBM, Renmin University of China. All rights reserved.
-# See LICENSE file in the project root for license information.
-
 import os
 import sys
 import torch
