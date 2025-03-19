@@ -1,18 +1,17 @@
 export PATH=$PATH:/home/jeeves/.local/bin
 
-pip install datasets -U
-pip install deepspeed
-pip install peft
-pip install -U transformers
 
-deepspeed --num_gpus=8 ./src/CPSFT/cpsft/train_sft.py\
- --data_path sft.json \
- --deepspeed ./src/deepspeed_config/ZeRO_3_cpu.json \
- --output_dir /data/checkpoints/mistral_sft/ \
+deepspeed --num_gpus=1 ./src/CPSFT/cpsft/train_sft.py\
+ --data_path ./data/ultrafeedback_csft.json \
+ --deepspeed ./src/CPSFT/cpsft/deepspeed_config/ZeRO_2.json \
+ --output_dir ./src/data/checkpoints/llama_sft/ \
  --eval_steps 20 \
  --save_steps 100 \
- --base_model /model/mistral-7b-hf \
- --prompt_template_name mistral_delete
+ --base_model meta-llama/Llama-3.2-1B-Instruct \
+ --prompt_template_name llama_1b_instruct \
+ --lora_r 8 \
+ --lora_alpha 16 \
+ --lora_dropout 0.05 \
 
 
 

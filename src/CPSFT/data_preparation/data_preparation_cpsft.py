@@ -1,37 +1,28 @@
-# This file is the data processing for CPSFT.
-
+from datasets import load_dataset
 import json
-
-# JSONL file list
-# UltraFeedback: https://huggingface.co/datasets/openbmb/UltraFeedback
-# UltraSafety: https://huggingface.co/datasets/openbmb/UltraSafety
-jsonl_files = ["evol_instruct.jsonl", "flan.jsonl", "truthful_qa.jsonl","false_qa.jsonl", "sharegpt.jsonl", "ultrachat.jsonl"]
 
 # Build the result list
 results = []
 
-for file_name in jsonl_files:
-    # Read the JSONL file
-    with open(file_name, 'r') as file:
-        data = file.readlines()
+# Load UltraFeedback dataset
+ds = load_dataset("openbmb/UltraFeedback")
 
-    # Parse each piece of data
-    for line in data:
-        json_data = json.loads(line)
-        instruction = json_data["instruction"]
-        completions = json_data["completions"]
-        
-        # Extract helpfulness or honesty Rating values from annotations for each completion
+# Process UltraFeedback dataset similar to local JSONL files
+for split in ds.keys():
+    print(f"Processing UltraFeedback split: {split}")
+    
+    for item in ds[split]:
+        instruction = item["instruction"]
+        completions = item["completions"]  # Assuming this field exists
+
         for completion in completions:
-            
             annotations = completion["annotations"]
-            helpfulness = "< helpfulness: " + annotations["helpfulness"]["Rating"] +" >"
-            honesty = "< honesty: " + annotations["honesty"]["Rating"] +" >"
-        
-            # Concatenate the values of instruction and helpfulness
-            # result = helpfulness + " " + honesty+ " "  + instruction 
-            # result = helpfulness + " " + instruction 
-            result = honesty+ " "  + instruction 
+
+            helpfulness = "< helpfulness: " + annotations["helpfulness"]["Rating"] + " >"
+            honesty = "< honesty: " + annotations["honesty"]["Rating"] + " >"
+
+            result = honesty + " " + instruction
+
             x = {
                 "instruction": result,
                 "input": "",
@@ -39,7 +30,12 @@ for file_name in jsonl_files:
             }
 
             results.append(x)
-print(len(results))
-# Write the result to a JSON file
-with open('H2_sft.json', 'w') as file:
-    json.dump(results, file, indent=4)
+
+print("Total examples processed from UltraFeedback:", len(results))
+
+# Save processed data as JSONL
+with open('ultrafeedback_csft.jsonl', 'w') as file:
+    for item in results:
+        file.write(json.dumps(item) + '\n')
+
+print("Processed UltraFeedback data saved to ultrafeedback_csft.jsonl")

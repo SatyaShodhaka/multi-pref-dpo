@@ -9,10 +9,10 @@ import sys
 import torch
 import transformers
 from datasets import load_dataset
-# from peft import (
-#     LoraConfig,
-#     get_peft_model,
-# )
+from peft import (
+    LoraConfig,
+    get_peft_model,
+)
 import json
 from transformers import AutoModelForCausalLM, AutoTokenizer  
 from utils.prompter import Prompter
@@ -23,7 +23,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 @dataclass
 class ModelArguments:
-    base_model: str = field(default="mistral-7b-hf")  
+    base_model: str = field(default="meta-llama/Llama-3.2-1B-Instruct")  
     lora_r: int = field(default=8)
     lora_alpha: int = field(default=16)
     lora_dropout: float = field(default=0.05)
@@ -47,7 +47,7 @@ class TrainingArguments(transformers.TrainingArguments):
     warmup_steps: int = field(default=100)
     num_train_epochs: int = field(default=3)
     learning_rate: float = field(default=1e-5)
-    bf16: bool = field(default=True)  
+    bf16: bool = field(default=False)  
     logging_steps: int = field(default=10)
     val_set_size: int = field(default=500)
     save_strategy: str = field(default="steps")
@@ -169,20 +169,18 @@ def train():
 
     prompter = Prompter(data_args.prompt_template_name)  # 构建对话模板生成类
 
-    tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)  # 构建Tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_args.base_model,
+        use_fast=True
+    )
 
     model = AutoModelForCausalLM.from_pretrained(
         model_args.base_model,
-        torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
-        # torch_dtype=torch.bfloat16, 
-        # use_flash_attention_2=True,
-        # device_map="auto",  
-    )  
-
-    tokenizer.pad_token_id = (
-        0  
+        torch_dtype=torch.float16,  # Use fp16 for compatibility
+        device_map="auto"           # Automatically map to available GPUs/accelerator
     )
+
+    tokenizer.pad_token = tokenizer.eos_token
 
     tokenizer.padding_side = "left"  
 
@@ -227,15 +225,15 @@ def train():
             tokenized_full_prompt["labels"] = [-100] * user_prompt_len + tokenized_full_prompt["labels"][user_prompt_len:]
         return tokenized_full_prompt
 
-    # config = LoraConfig(  # Lora
-    #     r=model_args.lora_r,
-    #     lora_alpha=model_args.lora_alpha,
-    #     target_modules=model_args.lora_target_modules,  
-    #     lora_dropout=model_args.lora_dropout,
-    #     bias="none",
-    #     task_type="CAUSAL_LM",
-    # )
-    # model = get_peft_model(model, config)  
+    config = LoraConfig(  # Lora
+        r=model_args.lora_r,
+        lora_alpha=model_args.lora_alpha,
+        target_modules=model_args.lora_target_modules,  
+        lora_dropout=model_args.lora_dropout,
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
+    model = get_peft_model(model, config)  
 
     if data_args.data_path.endswith(".json") or data_args.data_path.endswith(".jsonl"):
         data = load_dataset("json", data_files=data_args.data_path)
