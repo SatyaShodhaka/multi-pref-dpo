@@ -9,10 +9,10 @@ import sys
 import torch
 import transformers
 from datasets import load_dataset
-# from peft import (
-#     LoraConfig,
-#     get_peft_model,
-# )
+from peft import (
+    LoraConfig,
+    get_peft_model,
+)
 import json
 from transformers import AutoModelForCausalLM, AutoTokenizer  
 from utils.prompter import Prompter
@@ -227,15 +227,15 @@ def train():
             tokenized_full_prompt["labels"] = [-100] * user_prompt_len + tokenized_full_prompt["labels"][user_prompt_len:]
         return tokenized_full_prompt
 
-    # config = LoraConfig(  # Lora
-    #     r=model_args.lora_r,
-    #     lora_alpha=model_args.lora_alpha,
-    #     target_modules=model_args.lora_target_modules,  
-    #     lora_dropout=model_args.lora_dropout,
-    #     bias="none",
-    #     task_type="CAUSAL_LM",
-    # )
-    # model = get_peft_model(model, config)  
+    config = LoraConfig(  # Lora
+        r=model_args.lora_r,
+        lora_alpha=model_args.lora_alpha,
+        target_modules=model_args.lora_target_modules,  
+        lora_dropout=model_args.lora_dropout,
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
+    model = get_peft_model(model, config)  
 
     if data_args.data_path.endswith(".json") or data_args.data_path.endswith(".jsonl"):
         data = load_dataset("json", data_files=data_args.data_path)
