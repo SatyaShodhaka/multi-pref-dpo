@@ -1,5 +1,5 @@
-python ./src/CPSFT/cpsft/train_sft.py\
-  --data_path ./data/ultrafeedback_csft.json \
+python ./src/CPSFT/cpsft/train_sft_llama.py\
+  --data_path ./data/ultrafeedback_csft.jsonl \
   --output_dir ./src/data/checkpoints/llama_sft/ \
   --eval_steps 20 \
   --save_steps 100 \
