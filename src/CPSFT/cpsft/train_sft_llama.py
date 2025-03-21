@@ -175,8 +175,8 @@ def train():
         model_args.base_model,
         torch_dtype=torch.bfloat16,
         attn_implementation="flash_attention_2",
-        torch_dtype=torch.bfloat16, 
-        use_flash_attention_2=True,
+        # torch_dtype=torch.bfloat16, 
+        # use_flash_attention_2=True,
         device_map="auto",  
     )  
 
