@@ -188,7 +188,12 @@ def train():
 
     if os.path.exists(checkpoint_dir):
         print(f"Resuming from checkpoint {checkpoint_dir}")
-        model = AutoModelForCausalLM.from_pretrained(checkpoint_dir)
+        model = AutoModelForCausalLM.from_pretrained(
+            checkpoint_dir,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+            device_map="auto",
+        )
         tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
     else:
         model = AutoModelForCausalLM.from_pretrained(
