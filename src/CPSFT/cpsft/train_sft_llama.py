@@ -9,10 +9,10 @@ import sys
 import torch
 import transformers
 from datasets import load_dataset
-from peft import (
-    LoraConfig,
-    get_peft_model,
-)
+# from peft import (
+#     LoraConfig,
+#     get_peft_model,
+# )
 import json
 from transformers import AutoModelForCausalLM, AutoTokenizer  
 from utils.prompter import Prompter
@@ -172,7 +172,7 @@ def train():
     tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)  # 构建Tokenizer
 
 
-    Loading the base model
+    #Loading the base model
     model = AutoModelForCausalLM.from_pretrained(
         model_args.base_model,
         torch_dtype=torch.bfloat16,
@@ -253,14 +253,15 @@ def train():
             tokenized_full_prompt["labels"] = [-100] * user_prompt_len + tokenized_full_prompt["labels"][user_prompt_len:]
         return tokenized_full_prompt
 
-    config = LoraConfig(  # Lora
-        r=model_args.lora_r,
-        lora_alpha=model_args.lora_alpha,
-        target_modules=model_args.lora_target_modules,  
-        lora_dropout=model_args.lora_dropout,
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
+    # LoRa Config
+    # config = LoraConfig(  # Lora
+    #     r=model_args.lora_r,
+    #     lora_alpha=model_args.lora_alpha,
+    #     target_modules=model_args.lora_target_modules,  
+    #     lora_dropout=model_args.lora_dropout,
+    #     bias="none",
+    #     task_type="CAUSAL_LM",
+    # )
 
 
     model.train()  # Explicitly set training mode
