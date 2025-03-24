@@ -1,7 +1,7 @@
 #!/bin/bash
 
 python ./src/CPSFT/cpsft/train_sft_llama.py \
-  --data_path ./data/ultrafeedback_csft5k.jsonl \
+  --data_path ./data/ultrafeedback_csft.jsonl \
   --output_dir ./src/data/checkpoints/llama_sft/ \
   --eval_steps 20 \
   --save_steps 100 \
