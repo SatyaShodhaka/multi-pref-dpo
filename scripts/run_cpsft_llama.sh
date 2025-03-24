@@ -11,4 +11,4 @@ python ./src/CPSFT/cpsft/train_sft_llama.py \
   --gradient_accumulation_steps 32 \
   --learning_rate 1e-5 \
   --num_train_epochs 3 \
-  --val_set_size 500
+  --val_set_size 500 \

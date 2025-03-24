@@ -227,17 +227,17 @@ def train():
             tokenized_full_prompt["labels"] = [-100] * user_prompt_len + tokenized_full_prompt["labels"][user_prompt_len:]
         return tokenized_full_prompt
 
-    config = LoraConfig(  # Lora
-        r=model_args.lora_r,
-        lora_alpha=model_args.lora_alpha,
-        target_modules=model_args.lora_target_modules,  
-        lora_dropout=model_args.lora_dropout,
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
+    # config = LoraConfig(  # Lora
+    #     r=model_args.lora_r,
+    #     lora_alpha=model_args.lora_alpha,
+    #     target_modules=model_args.lora_target_modules,  
+    #     lora_dropout=model_args.lora_dropout,
+    #     bias="none",
+    #     task_type="CAUSAL_LM",
+    # )
     model.train()  # Explicitly set training mode
     model.enable_input_require_grads()  # Critical for gradient flow
-    model = get_peft_model(model, config)
+    # model = get_peft_model(model, config)
 
     model.print_trainable_parameters()  # Verify LoRA setup
 
@@ -275,6 +275,13 @@ def train():
 
     if torch.__version__ >= "2" and sys.platform != "win32":
         model = torch.compile(model)  
+
+    # Better performance on modern GPUs
+    torch.set_float32_matmul_precision('high')
+
+    # Add these to your training script:
+    torch.backends.cuda.enable_flash_sdp(True)  # Enable flash attention
+    torch.backends.cuda.enable_mem_efficient_sdp(True)  # Memory-efficient attention
 
     # Test forward/backward pass
     sample = next(iter(trainer.get_train_dataloader()))
