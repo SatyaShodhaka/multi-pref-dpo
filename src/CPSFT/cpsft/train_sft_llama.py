@@ -184,7 +184,7 @@ def train():
 
     # Loading the model from a checkpoint
     # Check if the checkpoint exists
-    checkpoint_dir = './src/data/checkpoints/llama_sft/checkpoint-400'
+    checkpoint_dir = './src/data/checkpoints/llama_sft/checkpoints-400'
 
     if os.path.exists(checkpoint_dir):
         print(f"Resuming from checkpoint {checkpoint_dir}")
@@ -319,7 +319,7 @@ def train():
     # trainer.train()
 
     # Resume training from the latest checkpoint
-    trainer.train(resume_from_checkpoint="./src/data/checkpoints/llama_sft/checkpoint-400")
+    trainer.train(resume_from_checkpoint="./src/data/checkpoints/llama_sft/checkpoints-400")
 
     model.save_pretrained(train_args.output_dir)
     tmp_dir = os.path.join(train_args.output_dir, "x.success")
