@@ -172,38 +172,38 @@ def train():
     tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)  # 构建Tokenizer
 
 
-    # Loading the base model
-    # model = AutoModelForCausalLM.from_pretrained(
-    #     model_args.base_model,
-    #     torch_dtype=torch.bfloat16,
-    #     attn_implementation="flash_attention_2",
-    #     # torch_dtype=torch.bfloat16, 
-    #     # use_flash_attention_2=True,
-    #     device_map="auto",  
-    # )
+    Loading the base model
+    model = AutoModelForCausalLM.from_pretrained(
+        model_args.base_model,
+        torch_dtype=torch.bfloat16,
+        attn_implementation="flash_attention_2",
+        # torch_dtype=torch.bfloat16, 
+        # use_flash_attention_2=True,
+        device_map="auto",  
+    )
 
-    # Loading the model from a checkpoint
-    # Check if the checkpoint exists
-    checkpoint_dir = './src/data/checkpoints/llama_sft/checkpoints-400'
+    # # Loading the model from a checkpoint
+    # # Check if the checkpoint exists
+    # checkpoint_dir = './src/data/checkpoints/llama_sft/checkpoints-400'
 
-    if os.path.exists(checkpoint_dir):
-        print(f"Resuming from checkpoint {checkpoint_dir}")
-        model = AutoModelForCausalLM.from_pretrained(
-            checkpoint_dir,
-            torch_dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
-            device_map="auto",
-            ignore_mismatched_sizes=True
-        )
-        tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
-    else:
-        model = AutoModelForCausalLM.from_pretrained(
-            model_args.base_model,
-            torch_dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
-            device_map="auto",
-        )
-        tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)
+    # if os.path.exists(checkpoint_dir):
+    #     print(f"Resuming from checkpoint {checkpoint_dir}")
+    #     model = AutoModelForCausalLM.from_pretrained(
+    #         checkpoint_dir,
+    #         torch_dtype=torch.bfloat16,
+    #         attn_implementation="flash_attention_2",
+    #         device_map="auto",
+    #         ignore_mismatched_sizes=True
+    #     )
+    #     tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
+    # else:
+    #     model = AutoModelForCausalLM.from_pretrained(
+    #         model_args.base_model,
+    #         torch_dtype=torch.bfloat16,
+    #         attn_implementation="flash_attention_2",
+    #         device_map="auto",
+    #     )
+    #     tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)
 
 
     tokenizer.pad_token_id = (
@@ -264,7 +264,7 @@ def train():
 
 
     model.train()  # Explicitly set training mode
-    model.enable_input_require_grads()  # Critical for gradient flow
+    #model.enable_input_require_grads()  # Critical for gradient flow
     # model = get_peft_model(model, config)
 
     print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
@@ -320,22 +320,22 @@ def train():
     loss.backward()
 
 
-    # Check some gradients
-    for name, param in model.named_parameters():
-        if param.requires_grad and param.grad is not None:
-            print(f"Gradient found for {name} - Mean: {param.grad.mean().item()}")
+    # # Check some gradients
+    # for name, param in model.named_parameters():
+    #     if param.requires_grad and param.grad is not None:
+    #         print(f"Gradient found for {name} - Mean: {param.grad.mean().item()}")
 
-        # Check gradients
-        for name, param in model.named_parameters():
-            if param.requires_grad and param.grad is None:
-                print(f"No gradient for {name}")
-            elif param.requires_grad:
-                print(f"Gradient found for {name}")
+    #     # Check gradients
+    #     for name, param in model.named_parameters():
+    #         if param.requires_grad and param.grad is None:
+    #             print(f"No gradient for {name}")
+    #         elif param.requires_grad:
+    #             print(f"Gradient found for {name}")
 
-    # trainer.train()
+    trainer.train()
 
-    # Resume training from the latest checkpoint
-    trainer.train(resume_from_checkpoint=checkpoint_dir)
+    # # Resume training from the latest checkpoint
+    # trainer.train(resume_from_checkpoint=checkpoint_dir)
 
     model.save_pretrained(train_args.output_dir)
     tmp_dir = os.path.join(train_args.output_dir, "x.success")
