@@ -13,7 +13,6 @@ DPO_FEEDBACK = {
 if __name__ == "__main__":
     fb_data = file_func.readJsonFile(DPO_FEEDBACK["cfg"])
     #sf_data = file_func.readJsonFile(DPO_SAFETY["cfg"])
-
     dpo_fb.Start(
         fb_data["input"], 
         fb_data["output"],
