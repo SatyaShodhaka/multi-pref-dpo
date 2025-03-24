@@ -227,21 +227,19 @@ def train():
             tokenized_full_prompt["labels"] = [-100] * user_prompt_len + tokenized_full_prompt["labels"][user_prompt_len:]
         return tokenized_full_prompt
 
-    # config = LoraConfig(  # Lora
-    #     r=model_args.lora_r,
-    #     lora_alpha=model_args.lora_alpha,
-    #     target_modules=model_args.lora_target_modules,  
-    #     lora_dropout=model_args.lora_dropout,
-    #     bias="none",
-    #     task_type="CAUSAL_LM",
-    # )
+    config = LoraConfig(  # Lora
+        r=model_args.lora_r,
+        lora_alpha=model_args.lora_alpha,
+        target_modules=model_args.lora_target_modules,  
+        lora_dropout=model_args.lora_dropout,
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
 
 
     model.train()  # Explicitly set training mode
     model.enable_input_require_grads()  # Critical for gradient flow
-    # model = get_peft_model(model, config)
-
-    #model.print_trainable_parameters()  # Verify LoRA setup
+    model = get_peft_model(model, config)
 
     print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
 
