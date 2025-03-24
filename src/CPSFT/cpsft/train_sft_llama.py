@@ -55,7 +55,7 @@ class TrainingArguments(transformers.TrainingArguments):
     eval_steps: int = field(default=100)  
     save_steps: int = field(default=100)  
     output_dir: str = field(default="/data/checkpoints/")
-    save_total_limit: int = field(default=10)
+    save_total_limit: int = field(default=1)
     group_by_length: bool = field(default=False)
 
 class CustomTrainer(transformers.Trainer):
@@ -171,14 +171,34 @@ def train():
 
     tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)  # 构建Tokenizer
 
-    model = AutoModelForCausalLM.from_pretrained(
-        model_args.base_model,
-        torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
-        # torch_dtype=torch.bfloat16, 
-        # use_flash_attention_2=True,
-        device_map="auto",  
-    )
+
+    # Loading the base model
+    # model = AutoModelForCausalLM.from_pretrained(
+    #     model_args.base_model,
+    #     torch_dtype=torch.bfloat16,
+    #     attn_implementation="flash_attention_2",
+    #     # torch_dtype=torch.bfloat16, 
+    #     # use_flash_attention_2=True,
+    #     device_map="auto",  
+    # )
+
+    # Loading the model from a checkpoint
+    # Check if the checkpoint exists
+    checkpoint_dir = './src/data/checkpoints/llama_sft/checkpoint-400'
+
+    if os.path.exists(checkpoint_dir):
+        print(f"Resuming from checkpoint {checkpoint_dir}")
+        model = AutoModelForCausalLM.from_pretrained(checkpoint_dir)
+        tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_args.base_model,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+            device_map="auto",
+        )
+        tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)
+
 
     tokenizer.pad_token_id = (
         0  
@@ -270,6 +290,9 @@ def train():
         data_collator=transformers.DataCollatorForSeq2Seq(  
             tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True
         ),
+
+        #resume from checkpoint
+        resume_from_checkpoint=True,
     )
     model.config.use_cache = False
 

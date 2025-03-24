@@ -10,4 +10,5 @@ python ./src/CPSFT/cpsft/train_sft_llama.py \
   --per_device_train_batch_size 8 \
   --gradient_accumulation_steps 32 \
   --learning_rate 1e-5 \
-  --num_train_epochs 3 \
+  --num_train_epochs 1 \
+  --resume_from_checkpoint ./src/data/checkpoints/llama_sft/checkpoint-400 \
