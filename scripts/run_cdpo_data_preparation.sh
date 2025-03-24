@@ -1,2 +1,2 @@
-cd ../src/CDPO/data_preparation
-python ./main.py
+
+python src/CDPO/data_preparation/main.py

@@ -1,6 +1,6 @@
 {
-  "input": "../../../src/CDPO/data_preparation/dpo_UltraFeedback.json",
-  "output": "../../../src/CDPO/data_preparation/path.json",
+  "input": "data/Ultrafeedback.json",
+  "output": "data/Ultrafeedback_dpo.json",
   "has_harmless": false,
   "random_cfg": [
     {
@@ -22,23 +22,23 @@
       "r2_enable": true,
       "random_range": {
         "5": {
-          "max_count": 0,
+          "max_count": 10000,
           "Honesty": 5
         },
         "4": {
-          "max_count": 0,
+          "max_count": 10000,
           "Honesty": 4
         },
         "3": {
-          "max_count": 0,
+          "max_count": 10000,
           "Honesty": 3
         },
         "2": {
-          "max_count": 0,
+          "max_count": 10000,
           "Honesty": 2
         },
         "1": {
-          "max_count": 0,
+          "max_count": 10000,
           "Honesty": 1
         }
       }

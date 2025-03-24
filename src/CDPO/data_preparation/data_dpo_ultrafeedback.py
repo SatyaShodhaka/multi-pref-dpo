@@ -1,9 +1,3 @@
-# This file is the UltraFeedback data processing for CDPO.
-# Author: Yiju Guo
-# Date: 2024-01
-# Copyright (c) RUCBM, Renmin University of China. All rights reserved.
-# See LICENSE file in the project root for license information.
-
 import json
 import random
 import argparse
@@ -71,7 +65,7 @@ def Start(srcpath:str, dstpath:str,has_harmless:bool,random_cfg:List[dict]):
     data = file_func.readJsonFile(srcpath)
     readed:Dict[str, bool] = {}
 
-    for CFG in random_cfg:
+    for CFG in random_cfg[0:1]:
         random_range:Dict[str,dict] = CFG.get("random_range")
         r1_enable:bool = CFG["r1_enable"]
         r2_enable:bool = CFG["r2_enable"]
@@ -92,7 +86,7 @@ def Start(srcpath:str, dstpath:str,has_harmless:bool,random_cfg:List[dict]):
                     continue
 
                 samples:List[dict] = []
-                samples = SampleTargetResponses(item["responses"],cfg)
+                samples = SampleTargetResponses(item["response"],cfg)
                 if not samples:
                     continue
                 sample = random.choice(samples)

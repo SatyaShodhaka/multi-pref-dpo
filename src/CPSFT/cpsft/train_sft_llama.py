@@ -23,7 +23,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 @dataclass
 class ModelArguments:
-    base_model: str = field(default="mistral-7b-hf")  
+    base_model: str = field(default="meta-llama/Llama-3.2-1B-Instruct")  
     lora_r: int = field(default=8)
     lora_alpha: int = field(default=16)
     lora_dropout: float = field(default=0.05)
@@ -32,8 +32,8 @@ class ModelArguments:
 
 @dataclass
 class DataArguments:
-    data_path: str = field(default="helpful.json")
-    prompt_template_name: str = field(default="mistral")
+    data_path: str = field(default="ultrafeedback_csft.jsonl")
+    prompt_template_name: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
     train_on_inputs: bool = field(default=True)
     add_eos_token: bool = field(default=False)
     cutoff_len: int = field(default=8192)
@@ -177,7 +177,7 @@ def train():
         attn_implementation="flash_attention_2",
         # torch_dtype=torch.bfloat16, 
         # use_flash_attention_2=True,
-        device_map="auto",  
+        # device_map="auto",  
     )  
 
     tokenizer.pad_token_id = (
