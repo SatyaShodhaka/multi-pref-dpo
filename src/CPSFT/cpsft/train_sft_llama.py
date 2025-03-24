@@ -259,7 +259,7 @@ def train():
 
     model.train()  # Explicitly set training mode
     model.enable_input_require_grads()  # Critical for gradient flow
-    model = get_peft_model(model, config)
+    # model = get_peft_model(model, config)
 
     print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
 
@@ -284,15 +284,7 @@ def train():
 
 
     # Training from checkpoint
-    from transformers import AdamW
-
-    # Create a new optimizer with model parameters
-    optimizer = AdamW(model.parameters(), lr=1e-5)
-
-    # Resetting the scheduler if needed
-    from transformers import get_linear_schedule_with_warmup
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=100, num_training_steps=1000)
-
+    
 
     trainer = CustomTrainer(
         model=model,
@@ -302,7 +294,6 @@ def train():
         data_collator=transformers.DataCollatorForSeq2Seq(  
             tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True
         ),
-        optimizers=(optimizer, scheduler),  # Pass optimizer and scheduler here
     )
     model.config.use_cache = False
 
