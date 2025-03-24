@@ -235,7 +235,9 @@ def train():
         bias="none",
         task_type="CAUSAL_LM",
     )
-    model = get_peft_model(model, config)  
+    model.train()  # Explicitly set training mode
+    model.enable_input_require_grads()  # Critical for gradient flow
+    model = get_peft_model(model, config)
 
     model.print_trainable_parameters()  # Verify LoRA setup
 
@@ -271,8 +273,21 @@ def train():
     )
     model.config.use_cache = False
 
-    # if torch.__version__ >= "2" and sys.platform != "win32":
-        # model = torch.compile(model)  
+    if torch.__version__ >= "2" and sys.platform != "win32":
+        model = torch.compile(model)  
+
+    # Test forward/backward pass
+    sample = next(iter(trainer.get_train_dataloader()))
+    outputs = model(**sample)
+    loss = outputs.loss
+    loss.backward()
+
+    # Check gradients
+    for name, param in model.named_parameters():
+        if param.requires_grad and param.grad is None:
+            print(f"No gradient for {name}")
+        elif param.requires_grad:
+            print(f"Gradient found for {name}")
 
     trainer.train()
 
