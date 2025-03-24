@@ -36,7 +36,7 @@ class DataArguments:
     prompt_template_name: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
     train_on_inputs: bool = field(default=True)
     add_eos_token: bool = field(default=False)
-    cutoff_len: int = field(default=4096)
+    cutoff_len: int = field(default=8192)
 
 
 @dataclass
