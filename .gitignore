@@ -174,3 +174,4 @@ cython_debug/
 data/*
 data/ultrafeedback_csft.json
 data/ultrafeedback_csft.jsonl
+src/data/checkpoints
