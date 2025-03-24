@@ -198,6 +198,8 @@ def train_model(data):
 
     train_dataset = load_dataset("json", data_files="././data/dpo_Ultrafeedback_10k.json", split='train')
     
+
+    model_dir = "././data/checkpoints/checkpoints-400"
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name="model",
         max_seq_length=2048,
@@ -232,7 +234,7 @@ def train_model(data):
             logging_steps=1,
             optim="adamw_8bit",
             seed=42,
-            output_dir="./outputs",
+            output_dir="././data/outputs",
         ),
         beta=0.1,
         train_dataset=train_dataset,
@@ -242,8 +244,8 @@ def train_model(data):
         max_prompt_length=512,
     )
     dpo_trainer.train()
-    model.save_pretrained("./saved_model")
-    tokenizer.save_pretrained("./saved_model")
+    model.save_pretrained("././data/saved_model")
+    tokenizer.save_pretrained("././data/saved_model")
 
 
 if __name__ == '__main__':
