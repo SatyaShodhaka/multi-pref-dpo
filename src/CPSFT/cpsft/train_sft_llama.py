@@ -282,6 +282,18 @@ def train():
         train_data = data["train"].shuffle().map(generate_and_tokenize_prompt)
         val_data = None
 
+
+    # Training from checkpoint
+    from transformers import AdamW
+
+    # Create a new optimizer with model parameters
+    optimizer = AdamW(model.parameters(), lr=1e-5)
+
+    # Resetting the scheduler if needed
+    from transformers import get_linear_schedule_with_warmup
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=100, num_training_steps=1000)
+
+
     trainer = CustomTrainer(
         model=model,
         train_dataset=train_data,
@@ -290,6 +302,7 @@ def train():
         data_collator=transformers.DataCollatorForSeq2Seq(  
             tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True
         ),
+        optimizers=(optimizer, scheduler),  # Pass optimizer and scheduler here
     )
     model.config.use_cache = False
 
