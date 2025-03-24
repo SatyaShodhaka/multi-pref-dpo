@@ -65,7 +65,7 @@ class CustomTrainer(transformers.Trainer):
         # assert unwrap_model(model) is self.model, "internal model should be a reference to self.model"
        
         # Save model checkpoint
-        PREFIX_CHECKPOINT_DIR = "checkpoint"
+        PREFIX_CHECKPOINT_DIR = "checkpoints"
         TRAINER_STATE_NAME = "trainer_state.json"
 
         
@@ -77,7 +77,7 @@ class CustomTrainer(transformers.Trainer):
         run_dir = self._get_output_dir(trial=trial)
         output_dir = os.path.join(run_dir, checkpoint_folder)
         if os.path.exists(output_dir) and len(os.listdir(output_dir)) > 0:
-            logger.warning(
+            print(
                 f"Checkpoint destination directory {output_dir} already exists and is non-empty."
                 "Saving will proceed but saved results may be invalid."
             )
@@ -227,19 +227,19 @@ def train():
             tokenized_full_prompt["labels"] = [-100] * user_prompt_len + tokenized_full_prompt["labels"][user_prompt_len:]
         return tokenized_full_prompt
 
-    config = LoraConfig(  # Lora
-        r=model_args.lora_r,
-        lora_alpha=model_args.lora_alpha,
-        target_modules=model_args.lora_target_modules,  
-        lora_dropout=model_args.lora_dropout,
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
+    # config = LoraConfig(  # Lora
+    #     r=model_args.lora_r,
+    #     lora_alpha=model_args.lora_alpha,
+    #     target_modules=model_args.lora_target_modules,  
+    #     lora_dropout=model_args.lora_dropout,
+    #     bias="none",
+    #     task_type="CAUSAL_LM",
+    # )
 
 
     model.train()  # Explicitly set training mode
     model.enable_input_require_grads()  # Critical for gradient flow
-    model = get_peft_model(model, config)
+    # model = get_peft_model(model, config)
 
     model.print_trainable_parameters()  # Verify LoRA setup
 
