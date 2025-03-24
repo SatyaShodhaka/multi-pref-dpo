@@ -241,7 +241,7 @@ def train():
     model.enable_input_require_grads()  # Critical for gradient flow
     # model = get_peft_model(model, config)
 
-    model.print_trainable_parameters()  # Verify LoRA setup
+    #model.print_trainable_parameters()  # Verify LoRA setup
 
     print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
 
