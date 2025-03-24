@@ -193,6 +193,7 @@ def train():
             torch_dtype=torch.bfloat16,
             attn_implementation="flash_attention_2",
             device_map="auto",
+            ignore_mismatched_sizes=True
         )
         tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
     else:
@@ -318,17 +319,23 @@ def train():
     loss = outputs.loss
     loss.backward()
 
-    # Check gradients
+
+    # Check some gradients
     for name, param in model.named_parameters():
-        if param.requires_grad and param.grad is None:
-            print(f"No gradient for {name}")
-        elif param.requires_grad:
-            print(f"Gradient found for {name}")
+        if param.requires_grad and param.grad is not None:
+            print(f"Gradient found for {name} - Mean: {param.grad.mean().item()}")
+
+        # Check gradients
+        for name, param in model.named_parameters():
+            if param.requires_grad and param.grad is None:
+                print(f"No gradient for {name}")
+            elif param.requires_grad:
+                print(f"Gradient found for {name}")
 
     # trainer.train()
 
     # Resume training from the latest checkpoint
-    trainer.train(resume_from_checkpoint="./src/data/checkpoints/llama_sft/checkpoints-400")
+    trainer.train(resume_from_checkpoint=checkpoint_dir)
 
     model.save_pretrained(train_args.output_dir)
     tmp_dir = os.path.join(train_args.output_dir, "x.success")
