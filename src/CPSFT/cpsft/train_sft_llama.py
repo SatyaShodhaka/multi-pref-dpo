@@ -238,7 +238,7 @@ def train():
 
 
     model.train()  # Explicitly set training mode
-    #model.enable_input_require_grads()  # Critical for gradient flow
+    model.enable_input_require_grads()  # Critical for gradient flow
     model = get_peft_model(model, config)
 
     model.print_trainable_parameters()  # Verify LoRA setup
