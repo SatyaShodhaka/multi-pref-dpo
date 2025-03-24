@@ -237,6 +237,8 @@ def train():
     )
     model = get_peft_model(model, config)  
 
+    model.print_trainable_parameters()  # Verify LoRA setup
+
     print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
 
     if data_args.data_path.endswith(".json") or data_args.data_path.endswith(".jsonl"):
