@@ -290,9 +290,6 @@ def train():
         data_collator=transformers.DataCollatorForSeq2Seq(  
             tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True
         ),
-
-        #resume from checkpoint
-        resume_from_checkpoint=True,
     )
     model.config.use_cache = False
 
@@ -319,7 +316,10 @@ def train():
         elif param.requires_grad:
             print(f"Gradient found for {name}")
 
-    trainer.train()
+    # trainer.train()
+
+    # Resume training from the latest checkpoint
+    trainer.train(resume_from_checkpoint="./src/data/checkpoints/llama_sft/checkpoint-400")
 
     model.save_pretrained(train_args.output_dir)
     tmp_dir = os.path.join(train_args.output_dir, "x.success")
