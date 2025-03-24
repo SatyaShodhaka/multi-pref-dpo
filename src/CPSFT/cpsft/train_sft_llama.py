@@ -237,6 +237,8 @@ def train():
     )
     model = get_peft_model(model, config)  
 
+    print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
+
     if data_args.data_path.endswith(".json") or data_args.data_path.endswith(".jsonl"):
         data = load_dataset("json", data_files=data_args.data_path)
     else:
@@ -264,12 +266,11 @@ def train():
         data_collator=transformers.DataCollatorForSeq2Seq(  
             tokenizer, pad_to_multiple_of=8, return_tensors="pt", padding=True
         ),
-        label_names=["labels"]
     )
     model.config.use_cache = False
 
-    if torch.__version__ >= "2" and sys.platform != "win32":
-        model = torch.compile(model)  
+    # if torch.__version__ >= "2" and sys.platform != "win32":
+        # model = torch.compile(model)  
 
     trainer.train()
 
