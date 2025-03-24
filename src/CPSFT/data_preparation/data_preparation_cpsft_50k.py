@@ -34,7 +34,7 @@ for split in ds.keys():
                 "output": completion["response"]
             }
             print(annotations["honesty"]["Rating"])
-            if examples_added[int(annotations["honesty"]["Rating"])-1] < 10000:
+            if examples_added[int(annotations["honesty"]["Rating"])-1] < 1000:
                 results.append(x)
                 examples_added[int(annotations["honesty"]["Rating"])-1] += 1
 
@@ -42,7 +42,7 @@ for split in ds.keys():
 print("Total examples processed from UltraFeedback:", len(results))
 
 # Save processed data as JSONL
-with open('ultrafeedback_csft.jsonl', 'w') as file:
+with open('ultrafeedback_csft5k.jsonl', 'w') as file:
     for item in results:
         file.write(json.dumps(item) + '\n')
 
