@@ -177,8 +177,8 @@ def train():
         attn_implementation="flash_attention_2",
         # torch_dtype=torch.bfloat16, 
         # use_flash_attention_2=True,
-        # device_map="auto",  
-    )  
+        device_map="auto",  
+    )
 
     tokenizer.pad_token_id = (
         0  
