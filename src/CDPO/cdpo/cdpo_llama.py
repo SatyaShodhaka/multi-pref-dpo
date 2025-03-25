@@ -56,12 +56,8 @@ def preprocess_data(srcpath):
             return json.dumps(obj,indent=4, sort_keys=True, separators=(',', ':'),ensure_ascii =False)
     def ModifyInstruction(Helpfulness_Rating:int, Honesty_Rating:int, Harmlessness_Rating:int, result:dict):
         text = ""
-        if Helpfulness_Rating != None:
-            text = text + f"< helplessness: {Helpfulness_Rating} > "
         if Honesty_Rating != None:
             text = text + f"< honesty: {Honesty_Rating} > "
-        if Harmlessness_Rating != None:
-            text = text + f"< harmlessness: {Harmlessness_Rating} > "
         text = text 
         result["instruction"] = text + result["instruction"]
     def GetRateByKey(response:dict,keys:List[str]):
@@ -109,7 +105,7 @@ def preprocess_data(srcpath):
     readed: Dict[str, bool] = {}
     for CFG in RANDOM_CFG:
         random_range:Dict[str,dict] = CFG.get("random_range")
-        r1_enable:bool = CFG["r1_enable"]
+        r1_enable:bool = False
         r2_enable:bool = CFG["r2_enable"]
 
         for key_name in random_range:
