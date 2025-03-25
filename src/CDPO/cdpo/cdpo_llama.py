@@ -192,7 +192,7 @@ def train_model(data):
     with open('././data/train.json', 'w') as file:
         json.dump(data, file, indent=4, ensure_ascii=False)
 
-    train_dataset = load_dataset("json", data_files="././data/dpo_Ultrafeedback_10k.json", split='train')
+    train_dataset = load_dataset("json", data_files="././data/dpo_UltraFeedback10k.json", split='train')
     
 
     model_dir = "././data/checkpoints/checkpoints-400"
