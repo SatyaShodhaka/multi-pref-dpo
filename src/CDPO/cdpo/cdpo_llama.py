@@ -196,8 +196,9 @@ def train_model(data):
     
 
     model_dir = "././data/checkpoints/checkpoints-400"
+    #Model path
     model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name="model",
+        model_name=model_dir,
         max_seq_length=2048,
         dtype=None,
         load_in_4bit=True,
