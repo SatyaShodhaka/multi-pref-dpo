@@ -54,7 +54,7 @@ def preprocess_data(srcpath):
             return json.dumps(obj,ensure_ascii=False, separators=(',', ':'))    
         else:
             return json.dumps(obj,indent=4, sort_keys=True, separators=(',', ':'),ensure_ascii =False)
-    def ModifyInstruction(Helpfulness_Rating:int, Honesty_Rating:int, Harmlessness_Rating:int, result:dict):
+    def ModifyInstruction(Honesty_Rating:int, result:dict):
         text = ""
         if Honesty_Rating != None:
             text = text + f"< honesty: {Honesty_Rating} > "
@@ -163,7 +163,7 @@ def preprocess_data(srcpath):
                             continue
                         result['R_chosen'] = R_i
                         result['R_reject'] = R_j
-                        ModifyInstruction(r1_enable and GetRateByKey(sample, DATA_KEYS["Help"]) or None, r2_enable and GetRateByKey(sample, DATA_KEYS["Honesty"]) or None, GetRateByKey(sample, DATA_KEYS["Harmless"]), result)
+                        ModifyInstruction(r2_enable and GetRateByKey(sample, DATA_KEYS["Honesty"]) or None, result)
                         results.append(result)
                         count = count+1
 
