@@ -3,6 +3,7 @@
 # Date: 2024-03
 # Copyright (c) RUCBM, Renmin University of China. All rights reserved.
 # See LICENSE file in the project root for license information.
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import json
 import random
@@ -197,12 +198,8 @@ def train_model(data):
 
     model_dir = "././data/checkpoints/checkpoints-400"
     #Model path
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=model_dir,
-        max_seq_length=2048,
-        dtype=None,
-        load_in_4bit=True,
-    )
+    model = AutoModelForCausalLM.from_pretrained(model_dir)
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
 
     # Do model patching and add fast LoRA weights
     model = FastLanguageModel.get_peft_model(
