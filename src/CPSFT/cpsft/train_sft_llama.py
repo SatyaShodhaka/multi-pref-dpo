@@ -9,14 +9,15 @@ import sys
 import torch
 import transformers
 from datasets import load_dataset
-# from peft import (
-#     LoraConfig,
-#     get_peft_model,
-# )
+from peft import (
+    LoraConfig,
+    get_peft_model,
+)
 import json
 from transformers import AutoModelForCausalLM, AutoTokenizer  
 from utils.prompter import Prompter
 from dataclasses import dataclass, field
+import numpy as np
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  
 
@@ -60,11 +61,6 @@ class TrainingArguments(transformers.TrainingArguments):
 
 class CustomTrainer(transformers.Trainer):
     def _save_checkpoint(self, model, trial, metrics=None):
-        # In all cases, including ddp/dp/deepspeed, self.model is always a reference to the model we
-        # want to save except FullyShardedDDP.
-        # assert unwrap_model(model) is self.model, "internal model should be a reference to self.model"
-       
-        # Save model checkpoint
         PREFIX_CHECKPOINT_DIR = "checkpoints"
         TRAINER_STATE_NAME = "trainer_state.json"
 
@@ -143,6 +139,9 @@ def train():
     train_args.evaluation_strategy = "steps" if train_args.val_set_size > 0 else "no"
     model_args.lora_target_modules = json.loads(model_args.lora_target_modules)
 
+    # Get the current device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     print(
         f"Training Alpaca-LoRA model with params:\n"
         f"base_model: {model_args.base_model}\n"
@@ -172,46 +171,42 @@ def train():
     tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)  # 构建Tokenizer
 
 
-    #Loading the base model
-    model = AutoModelForCausalLM.from_pretrained(
-        model_args.base_model,
-        torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
-        # torch_dtype=torch.bfloat16, 
-        # use_flash_attention_2=True,
-        device_map="auto",  
-    )
+    # Set torch backend
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    # Nvidia A100
+    if device.type == "cuda":
+        print("Using CUDA device: ", torch.cuda.get_device_name(0))
+        print("CUDA device count: ", torch.cuda.device_count())
+        #Loading the base model
+        model = AutoModelForCausalLM.from_pretrained(
+            model_args.base_model,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+            device_map="auto",  
+        )
 
-    # # Loading the model from a checkpoint
-    # # Check if the checkpoint exists
-    # checkpoint_dir = './src/data/checkpoints/llama_sft/checkpoints-400'
-
-    # if os.path.exists(checkpoint_dir):
-    #     print(f"Resuming from checkpoint {checkpoint_dir}")
-    #     model = AutoModelForCausalLM.from_pretrained(
-    #         checkpoint_dir,
-    #         torch_dtype=torch.bfloat16,
-    #         attn_implementation="flash_attention_2",
-    #         device_map="auto",
-    #         ignore_mismatched_sizes=True
-    #     )
-    #     tokenizer = AutoTokenizer.from_pretrained(checkpoint_dir)
-    # else:
-    #     model = AutoModelForCausalLM.from_pretrained(
-    #         model_args.base_model,
-    #         torch_dtype=torch.bfloat16,
-    #         attn_implementation="flash_attention_2",
-    #         device_map="auto",
-    #     )
-    #     tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)
-
-
+    # Mac M1/M2    
+    else:
+        print("Using CPU or MPS device: ", device)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_args.base_model,
+            torch_dtype=torch.float32,
+        )
+    
+    # Pad token id
     tokenizer.pad_token_id = (
         0  
     )
 
     tokenizer.padding_side = "left"  
 
+
+    # Tokenize the prompts
     def tokenize(prompt, add_eos_token=True):
         result = tokenizer(
             prompt,
@@ -231,6 +226,8 @@ def train():
         result["labels"] = result["input_ids"].copy()  
         return result
 
+
+    # Generate the prompt and tokenize it
     def generate_and_tokenize_prompt(data_point):
         full_prompt = prompter.generate_prompt(
             data_point["instruction"],
@@ -254,21 +251,24 @@ def train():
         return tokenized_full_prompt
 
     # LoRa Config
-    # config = LoraConfig(  # Lora
-    #     r=model_args.lora_r,
-    #     lora_alpha=model_args.lora_alpha,
-    #     target_modules=model_args.lora_target_modules,  
-    #     lora_dropout=model_args.lora_dropout,
-    #     bias="none",
-    #     task_type="CAUSAL_LM",
-    # )
+    config = LoraConfig(  # Lora
+        r=model_args.lora_r,
+        lora_alpha=model_args.lora_alpha,
+        target_modules=model_args.lora_target_modules,  
+        lora_dropout=model_args.lora_dropout,
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
 
 
     model.train()  # Explicitly set training mode
-    #model.enable_input_require_grads()  # Critical for gradient flow
-    # model = get_peft_model(model, config)
+    model.enable_input_require_grads()  # Critical for gradient flow
+    model = get_peft_model(model, config)
 
     print(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
+    print("Non-trainable parameters: ", sum(p.numel() for p in model.parameters() if not p.requires_grad))
+    print("Total parameters: ", sum(p.numel() for p in model.parameters()))
+
 
     if data_args.data_path.endswith(".json") or data_args.data_path.endswith(".jsonl"):
         data = load_dataset("json", data_files=data_args.data_path)
@@ -286,13 +286,25 @@ def train():
             train_val["test"].shuffle().map(generate_and_tokenize_prompt)
         )
     else:
-        train_data = data["train"].shuffle().map(generate_and_tokenize_prompt)
-        val_data = None
+        # Split the training data into train, test and val
+        
+        train_size = int(len(data["train"]) * 0.9)
+        val_size = int(len(data["train"]) * 0.1)
+        #test_size = int(len(data["train"]) * 0.1)
+
+        train_data = (
+            data["train"].shuffle().select(range(train_size)).map(generate_and_tokenize_prompt)
+        )
+
+        val_data = (
+            data["train"].shuffle().select(range(train_size, train_size + val_size)).map(generate_and_tokenize_prompt)
+        )
+        # test_data = (
+        #     data["train"].shuffle().select(range(train_size + val_size, train_size + val_size + test_size)).map(generate_and_tokenize_prompt)   
+        # )
 
 
     # Training from checkpoint
-    
-
     trainer = CustomTrainer(
         model=model,
         train_dataset=train_data,
@@ -304,39 +316,31 @@ def train():
     )
     model.config.use_cache = False
 
-    if torch.__version__ >= "2" and sys.platform != "win32":
+    if torch.__version__ >= "2" and sys.platform != "win32" and device.type == "cuda":
+        # torch.compile with cuda
         model = torch.compile(model)  
 
-    # Better performance on modern GPUs
-    torch.set_float32_matmul_precision('high')
+    if device.type == "cuda":
+        # Better performance on modern GPUs
+        torch.set_float32_matmul_precision('high')
 
-    # Add these to your training script:
-    torch.backends.cuda.enable_flash_sdp(True)  # Enable flash attention
-    torch.backends.cuda.enable_mem_efficient_sdp(True)  # Memory-efficient attention
+        # Add these to your training script:
+        torch.backends.cuda.enable_flash_sdp(True)  # Enable flash attention
+        torch.backends.cuda.enable_mem_efficient_sdp(True)  # Memory-efficient attention
+    
 
     # Test forward/backward pass
+    print("Testing forward/backward pass...")
     sample = next(iter(trainer.get_train_dataloader()))
     outputs = model(**sample)
     loss = outputs.loss
     loss.backward()
 
+    print("Forward/backward pass test passed.")
 
-    # # Check some gradients
-    # for name, param in model.named_parameters():
-    #     if param.requires_grad and param.grad is not None:
-    #         print(f"Gradient found for {name} - Mean: {param.grad.mean().item()}")
-
-    #     # Check gradients
-    #     for name, param in model.named_parameters():
-    #         if param.requires_grad and param.grad is None:
-    #             print(f"No gradient for {name}")
-    #         elif param.requires_grad:
-    #             print(f"Gradient found for {name}")
-
+    print("Starting training...")
+    # Start training
     trainer.train()
-
-    # # Resume training from the latest checkpoint
-    # trainer.train(resume_from_checkpoint=checkpoint_dir)
 
     model.save_pretrained(train_args.output_dir)
     tmp_dir = os.path.join(train_args.output_dir, "x.success")

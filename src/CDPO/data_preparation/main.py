@@ -3,7 +3,7 @@ import data_dpo_ultrafeedback as dpo_fb
 #import data_dpo_ultrasafety as dpo_sf
 
 DPO_FEEDBACK = {
-    "cfg": "scripts/dpo_ultrafeedback_cfg.json",
+    "cfg": "././././data/dpo_ultrafeedback_cfg_llama.json",
 }
 
 # DPO_SAFETY = {
