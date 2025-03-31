@@ -304,7 +304,10 @@ def train():
         # )
 
 
+    # Train the model to predict the rating given prompt(instruction + response + type of preference) -> (rating)
+    # Given an input compare output1 and outpu2, the model has to pick based on the preference or delta (diff) between O1 and O2
     # Training from checkpoint
+
     trainer = CustomTrainer(
         model=model,
         train_dataset=train_data,
