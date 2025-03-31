@@ -1,252 +1,194 @@
-# This file is script to perform CPO on UltraFeedBack dataset 
-# Author: Bowen Sun, Yiju Guo
-# Date: 2024-03
-# Copyright (c) RUCBM, Renmin University of China. All rights reserved.
-# See LICENSE file in the project root for license information.
+# This file is the CPSFT DPO training process.
+# Modified for DPO based on the original SFT script
+# Author: Your Name
+# Date: 2024-05
+# Copyright (c) Organization, All rights reserved.
 
-import json
-import random
-import argparse
-from typing import List, Dict
+import os
+import sys
 import torch
-from transformers import TrainingArguments
-from trl import DPOTrainer
+import transformers
 from datasets import load_dataset
-from unsloth import FastLanguageModel, PatchDPOTrainer
+from peft import (
+    LoraConfig,
+    get_peft_model,
+    PeftModel
+)
+import json
+from transformers import (
+    AutoModelForCausalLM, 
+    AutoTokenizer,
+    DPOTrainer,
+    HfArgumentParser
+)
+from utils.prompter import Prompter
+from dataclasses import dataclass, field
+import numpy as np
 
-#Part One: data preprocessing logic
-def preprocess_data(srcpath):
-    def readJsonFile(filePath: str, encoding="utf-8") -> dict:
-        with open(filePath, "r", encoding=encoding) as file:
-            return json.load(file)
 
-    def SampleTargetResponses(responses: List[dict], cfg: dict):
-        output: List[dict] = []
-        for r in responses:
-            valid = True
-            for cfg_key in cfg:
-                if cfg_key not in DATA_KEYS:
-                    continue
+@dataclass
+class ModelArguments:
+    base_model: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
+    lora_r: int = field(default=8)
+    lora_alpha: int = field(default=16)
+    lora_dropout: float = field(default=0.05)
+    lora_target_modules: str = field(default='["q_proj","v_proj"]')
 
-                rate = cfg.get(cfg_key)
-                if rate is None:
-                    continue
+@dataclass
+class DataArguments:
+    data_path: str = field(default="ultrafeedback_dpo.jsonl")  # Changed to DPO format
+    prompt_template_name: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
+    add_eos_token: bool = field(default=False)
+    cutoff_len: int = field(default=8192)
 
-                keys = DATA_KEYS.get(cfg_key)
-                cur_rate = None
-                for key in keys:
-                    if key in r:
-                        cur_rate = int(r.get(key))
-                        break
+@dataclass
+class TrainingArguments(transformers.TrainingArguments):
+    per_device_train_batch_size: int = field(default=8)
+    gradient_accumulation_steps: int = field(default=32)
+    gradient_checkpointing: bool = field(default=True)
+    warmup_steps: int = field(default=100)
+    num_train_epochs: int = field(default=3)
+    learning_rate: float = field(default=1e-5)
+    bf16: bool = field(default=True)
+    logging_steps: int = field(default=10)
+    evaluation_strategy: str = field(default="no")
+    output_dir: str = field(default="/data/checkpoints/")
+    save_total_limit: int = field(default=1)
+    group_by_length: bool = field(default=False)
+    # DPO specific parameters
+    beta: float = field(default=0.1)  # Temperature parameter for DPO loss
+    max_prompt_length: int = field(default=1024)
+    max_length: int = field(default=2048)
+    loss_type: str = field(default="sigmoid")  # sigmoid or hinge
 
-                if cur_rate != rate:
-                    valid = False
-                    break
+def train():
+    parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
+    model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+    model_args.lora_target_modules = json.loads(model_args.lora_target_modules)
 
-            if not valid:
-                continue
+    print(
+        f"Training Alpaca-LoRA model with DPO params:\n"
+        f"base_model: {model_args.base_model}\n"
+        f"data_path: {data_args.data_path}\n"
+        f"output_dir: {training_args.output_dir}\n"
+        f"beta: {training_args.beta}\n"
+        f"loss_type: {training_args.loss_type}\n"
+    )
 
-            output.append(r)
+    # Initialize prompter and tokenizer
+    prompter = Prompter(data_args.prompt_template_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
 
-        return output
-    def changeToJson(obj,isFormat)->str:
-        if(not isFormat):
-            return json.dumps(obj,ensure_ascii=False, separators=(',', ':'))    
-        else:
-            return json.dumps(obj,indent=4, sort_keys=True, separators=(',', ':'),ensure_ascii =False)
-    def ModifyInstruction(Honesty_Rating:int, result:dict):
-        text = ""
-        if Honesty_Rating != None:
-            text = text + f"< honesty: {Honesty_Rating} > "
-        text = text 
-        result["instruction"] = text + result["instruction"]
-    def GetRateByKey(response:dict,keys:List[str]):
-        for key in keys:
-            if response.get(key):
-                return int(response.get(key))
-   
-    DATA_KEYS = {
-        "Honesty": ["Honesty_Rating"],
-    }
-
-    HAS_HARMLESS = False
-
-    RANDOM_CFG = [
-        {
-            "r1_enable": False,
-            "r2_enable": True,
-            "random_range": {
-                "5": {
-                    "max_count": 5000,
-                    "Honesty": 5,
-                },
-                "4": {
-                    "max_count": 5000,
-                    "Honesty": 4,
-                },
-                "3": {
-                    "max_count": 5000,
-                    "Honesty": 3,
-                },
-                "2": {
-                    "max_count": 5000,
-                    "Honesty": 2,
-                },
-                "1": {
-                    "max_count": 5000,
-                    "Honesty": 1,
-                },
-            },
-        },
-    ]
-
-    data = readJsonFile(srcpath)
-    results = []
-    readed: Dict[str, bool] = {}
-    for CFG in RANDOM_CFG:
-        random_range:Dict[str,dict] = CFG.get("random_range")
-        r1_enable:bool = False
-        r2_enable:bool = CFG["r2_enable"]
-
-        for key_name in random_range:
-            cfg = random_range[key_name]
-
-            max_count = cfg["max_count"]
-            count = 0
-
-            for item in data:
-                if count >= max_count:
-                    break
-
-                if readed.get(changeToJson(item,False)):
-                    continue
-
-                samples:List[dict] = []
-                samples = SampleTargetResponses(item["responses"],cfg)
-                if not samples:
-                    continue
-                sample = random.choice(samples)
-
-                def GetR(response:dict):
-                    R2 = r2_enable and -abs(GetRateByKey(response,DATA_KEYS["Honesty"])) - int(GetRateByKey(sample, DATA_KEYS["Honesty"])) or GetRateByKey(response, DATA_KEYS["Honesty"])
-                    return R2
-
-                instruction = item["instruction"]
-                responses = item["responses"]
-                for i in range(len(responses)):
-                    for j in range(i+1,len(responses)):
-                        if count >= max_count:
-                            break
-                        response_i = responses[i]
-                        response_j = responses[j]
-
-                        R_i = GetR(response_i)
-                        R_j = GetR(response_j)
-
-                        # 比较R值
-                        if R_i > R_j:
-                            result = {
-                                "instruction": instruction,
-                                "chosen": response_i["response"],
-                                "reject": response_j["response"]
-                            }
-                        elif R_i < R_j:
-                            result = {
-                                "instruction": instruction,
-                                "chosen": response_j["response"],
-                                "reject": response_i["response"]
-                            }
-                            temp = R_i
-                            R_i = R_j
-                            R_j = temp
-                        else:
-                            continue
-                        result['R_chosen'] = R_i
-                        result['R_reject'] = R_j
-                        ModifyInstruction(r2_enable and GetRateByKey(sample, DATA_KEYS["Honesty"]) or None, result)
-                        results.append(result)
-                        count = count+1
-
-            #print(f"r1_enable:{r1_enable}, r2_enable:{r2_enable}的{key_name}的{cfg}采了{count}条")
-    return results
-
-# Part 2: Further processing the dataset
-def further_process_data(data):
-    processed_data = []
-    for item in data:
-        item.pop('R_chosen', None)
-        item.pop('R_reject', None)
-        if 'instruction' in item:
-            item['instruction'] = item['instruction'].replace('< helplessness: 5 > < honesty: 5 > ', '')
-            item['prompt'] = item.pop('instruction')
-        if 'reject' in item:
-            item['rejected'] = item.pop('reject')
-        processed_data.append(item)
-    return processed_data
-
-# Part 3: Training
-def train_model(data):
-    PatchDPOTrainer()
-    #What is paths_dpo.json?
-    # paths_dpo.json is a JSON file that contains the training data for the model.
-    with open('././data/train.json', 'w') as file:
-        json.dump(data, file, indent=4, ensure_ascii=False)
-
-    train_dataset = load_dataset("json", data_files="././data/dpo_UltraFeedback10k.json", split='train')
+    # Load base model
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    torch_dtype = torch.bfloat16 if device == "cuda" else torch.float32
     
-
-    model_dir = "././data/checkpoints/checkpoints-400"
-    #Model path
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=model_dir,
-        max_seq_length=2048,
-        dtype=None,
-        load_in_4bit=True,
+    model = AutoModelForCausalLM.from_pretrained(
+        model_args.base_model,
+        torch_dtype=torch_dtype,
+        attn_implementation="flash_attention_2" if device == "cuda" else None,
+        device_map="auto",
     )
-
-    # Do model patching and add fast LoRA weights
-    model = FastLanguageModel.get_peft_model(
-        model,
-        r=64,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
-                        "gate_proj", "up_proj", "down_proj", ],
-        lora_alpha=64,
-        lora_dropout=0,  # Supports any, but = 0 is optimized
-        bias="none",  # Supports any, but = "none" is optimized
-        use_gradient_checkpointing=True,
-        random_state=3407,
-        max_seq_length=2048,
+    
+    # LoRA configuration
+    lora_config = LoraConfig(
+        r=model_args.lora_r,
+        lora_alpha=model_args.lora_alpha,
+        target_modules=model_args.lora_target_modules,
+        lora_dropout=model_args.lora_dropout,
+        bias="none",
+        task_type="CAUSAL_LM",
     )
+    model = get_peft_model(model, lora_config)
+    model.print_trainable_parameters()
 
+    # Create reference model
+    ref_model = AutoModelForCausalLM.from_pretrained(
+        model_args.base_model,
+        torch_dtype=torch_dtype,
+        attn_implementation="flash_attention_2" if device == "cuda" else None,
+        device_map="auto",
+    )
+    ref_model = PeftModel.from_pretrained(ref_model, model_args.base_model)
+    ref_model.requires_grad_(False)
+
+    # Load and process dataset
+    def process_dpo_data(item):
+        prompt = prompter.generate_prompt(
+            item["instruction"],
+            item["input"]
+        )
+        return {
+            "prompt": prompt,
+            "chosen": item["chosen"],
+            "rejected": item["rejected"],
+        }
+
+    dataset = load_dataset("json", data_files=data_args.data_path)["train"]
+    dataset = dataset.map(process_dpo_data)
+
+    # Tokenization function for DPO
+    def tokenize_dpo(item):
+        prompt = item["prompt"]
+        chosen = item["chosen"]
+        rejected = item["rejected"]
+
+        tokenized_prompt = tokenizer(
+            prompt,
+            max_length=data_args.cutoff_len,
+            truncation=True,
+            add_special_tokens=False,
+        )
+        
+        tokenized_chosen = tokenizer(
+            chosen,
+            max_length=data_args.cutoff_len,
+            truncation=True,
+            add_special_tokens=False,
+        )
+        
+        tokenized_rejected = tokenizer(
+            rejected,
+            max_length=data_args.cutoff_len,
+            truncation=True,
+            add_special_tokens=False,
+        )
+
+        return {
+            "input_ids_chosen": tokenized_chosen["input_ids"],
+            "attention_mask_chosen": tokenized_chosen["attention_mask"],
+            "input_ids_rejected": tokenized_rejected["input_ids"],
+            "attention_mask_rejected": tokenized_rejected["attention_mask"],
+            "prompt_input_ids": tokenized_prompt["input_ids"],
+            "prompt_attention_mask": tokenized_prompt["attention_mask"],
+        }
+
+    tokenized_dataset = dataset.map(tokenize_dpo)
+
+    # Initialize DPO Trainer
     dpo_trainer = DPOTrainer(
         model=model,
-        ref_model=None,
-        args=TrainingArguments(
-            per_device_train_batch_size=4,
-            gradient_accumulation_steps=8,
-            warmup_ratio=0.1,
-            num_train_epochs=3,
-            fp16=not torch.cuda.is_bf16_supported(),
-            bf16=torch.cuda.is_bf16_supported(),
-            logging_steps=1,
-            optim="adamw_8bit",
-            seed=42,
-            output_dir="././data/outputs",
-        ),
-        beta=0.1,
-        train_dataset=train_dataset,
-        # eval_dataset = YOUR_DATASET_HERE,
+        ref_model=ref_model,
+        args=training_args,
+        beta=training_args.beta,
+        train_dataset=tokenized_dataset,
         tokenizer=tokenizer,
-        max_length=1024,
-        max_prompt_length=512,
+        max_prompt_length=data_args.cutoff_len,
+        max_length=data_args.cutoff_len*2,
+        loss_type=training_args.loss_type,
     )
+
+    # Start training
+    print("Starting DPO training...")
     dpo_trainer.train()
-    model.save_pretrained("././data/saved_model")
-    tokenizer.save_pretrained("././data/saved_model")
+    dpo_trainer.save_model(training_args.output_dir)
 
+    # Save completion marker
+    tmp_dir = os.path.join(training_args.output_dir, "dpo.success")
+    with open(tmp_dir, 'w') as f:
+        f.write("training completed\n")
 
-if __name__ == '__main__':
-    srcpath = '././data/dpo_UltraFeedback10k.json'
-    preprocessed_data = preprocess_data(srcpath)
-    processed_data = further_process_data(preprocessed_data)
-    train_model(processed_data)
+if __name__ == "__main__":
+    train()

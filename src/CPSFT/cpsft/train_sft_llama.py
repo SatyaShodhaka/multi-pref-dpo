@@ -52,7 +52,7 @@ class TrainingArguments(transformers.TrainingArguments):
     logging_steps: int = field(default=10)
     val_set_size: int = field(default=500)
     save_strategy: str = field(default="steps")
-    eval_strategy: str = field(default="no")
+    evaluation_strategy: str = field(default="no")
     eval_steps: int = field(default=100)  
     save_steps: int = field(default=100)  
     output_dir: str = field(default="/data/checkpoints/")
@@ -136,7 +136,7 @@ def train():
 
     parser = transformers.HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, train_args = parser.parse_args_into_dataclasses()
-    train_args.eval_strategy = "steps" if train_args.val_set_size > 0 else "no"
+    train_args.eval_strategy = "steps" #if train_args.val_set_size > 0 else "no"
 
     print("training_args eval: ", train_args.eval_strategy)
     model_args.lora_target_modules = json.loads(model_args.lora_target_modules)
@@ -289,7 +289,7 @@ def train():
         )
     else:
         # Split the training data into train, test and val
-        
+        print("No validation set provided, splitting the training data into train and validation sets.")
         train_size = int(len(data["train"]) * 0.9)
         val_size = int(len(data["train"]) * 0.1)
         #test_size = int(len(data["train"]) * 0.1)
@@ -305,6 +305,8 @@ def train():
         #     data["train"].shuffle().select(range(train_size + val_size, train_size + val_size + test_size)).map(generate_and_tokenize_prompt)   
         # )
 
+    print("Train_Data samples: ", len(train_data))
+    print("Val_Data samples: ", len(val_data))
 
     # Train the model to predict the rating given prompt(instruction + response + type of preference) -> (rating)
     # Given an input compare output1 and outpu2, the model has to pick based on the preference or delta (diff) between O1 and O2
