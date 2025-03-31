@@ -52,7 +52,7 @@ class TrainingArguments(transformers.TrainingArguments):
     logging_steps: int = field(default=10)
     val_set_size: int = field(default=500)
     save_strategy: str = field(default="steps")
-    evaluation_strategy: str = field(default="no")
+    eval_strategy: str = field(default="no")
     eval_steps: int = field(default=100)  
     save_steps: int = field(default=100)  
     output_dir: str = field(default="/data/checkpoints/")
@@ -136,7 +136,9 @@ def train():
 
     parser = transformers.HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, train_args = parser.parse_args_into_dataclasses()
-    train_args.evaluation_strategy = "steps" if train_args.val_set_size > 0 else "no"
+    train_args.eval_strategy = "steps" if train_args.val_set_size > 0 else "no"
+
+    print("training_args eval: ", train_args.eval_strategy)
     model_args.lora_target_modules = json.loads(model_args.lora_target_modules)
 
     # Get the current device

@@ -3,7 +3,7 @@
 python ./src/CPSFT/cpsft/train_sft_llama.py \
   --data_path ./data/ultrafeedback_csft.jsonl \
   --output_dir ./data/checkpoints/llama_sft/ \
-  --eval_steps 20 \
+  --eval_steps 1 \
   --save_steps 500 \
   --base_model meta-llama/Llama-3.2-1B-Instruct \
   --prompt_template_name llama_1b_instruct \
