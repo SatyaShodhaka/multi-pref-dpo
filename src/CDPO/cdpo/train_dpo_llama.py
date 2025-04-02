@@ -257,7 +257,6 @@ def train():
         ),
         beta = 0.1,
         train_dataset = train_data,
-        # eval_dataset = YOUR_DATASET_HERE,
         tokenizer = tokenizer,
         max_length = 1024,
         max_prompt_length = 512,
