@@ -219,7 +219,6 @@ def train():
     val_data = val_data.rename_column("reject", "rejected")
 
 
-
     # Unsloth for large models
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name = training_args.merged_model_path,      # Local 4bit-mistral model
@@ -254,7 +253,7 @@ def train():
             logging_steps = 1,
             optim = "adamw_8bit",
             seed = 42,
-            output_dir = "./outputs",
+            output_dir = training_args.output_dir,
         ),
         beta = 0.1,
         train_dataset = train_data,
