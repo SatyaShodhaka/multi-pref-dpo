@@ -145,7 +145,7 @@ def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     print(
-        f"Training Alpaca-LoRA model with params:\n"
+        f"Training LoRA model with params:\n"
         f"base_model: {model_args.base_model}\n"
         f"data_path: {data_args.data_path}\n"
         f"output_dir: {train_args.output_dir}\n"
@@ -276,6 +276,11 @@ def train():
         data = load_dataset("json", data_files=data_args.data_path)
     else:
         data = load_dataset(data_args.data_path)
+
+    print("Data loaded successfully.")
+    print("Data keys: ", data.keys())
+    print("Length of data: ", len(data["train"]))
+    print("Data columns: ", data["train"].column_names)
 
     if train_args.val_set_size > 0:  
         train_val = data["train"].train_test_split(
