@@ -3,11 +3,6 @@ import sys
 import torch
 import transformers
 from datasets import load_dataset
-from peft import (
-    LoraConfig,
-    get_peft_model,
-    PeftModel
-)
 import json
 from transformers import (
     AutoModelForCausalLM, 
@@ -17,6 +12,8 @@ from transformers import (
 from utils.prompter import Prompter
 from dataclasses import dataclass, field
 import numpy as np
+from trl import DPOTrainer
+from trl import TrainningArguments
 import unsloth
 from unsloth import FastLanguageModel, PatchDPOTrainer
 
@@ -169,7 +166,6 @@ def train():
         # Generate the full prompt
         full_prompt = prompter.generate_prompt(
             data_point["instruction"]
-        
         )  
         tokenized_full_prompt = tokenize(full_prompt)
         return tokenized_full_prompt
@@ -223,7 +219,23 @@ def train():
         max_seq_length = 2048,
         dtype = None,       # Automatically determines whether BF16 is enabled
         load_in_4bit = True,
+        use_gradient_checkpointing = "unsloth"
     )
+
+    training_args = {
+        "num_train_epochs": 3,
+        "per_device_train_batch_size": 4,
+        "gradient_accumulation_steps": 8,
+        "learning_rate": 2e-4,
+        "optim": "adamw_8bit",
+        "weight_decay": 0.01,
+        "lr_scheduler_type": "linear",
+        "warmup_ratio": 0.1,
+        "max_grad_norm": 1.0,
+        "fp16": True,
+        "seed": 42,
+    }
+
 
     # Do model patching and add fast LoRA weights
     model = FastLanguageModel.get_peft_model(
@@ -239,24 +251,11 @@ def train():
     )
 
     dpo_trainer = DPOTrainer(
-        model = model,
-        ref_model = None,
-        args = TrainingArguments(
-            per_device_train_batch_size = 8,
-            gradient_accumulation_steps = 16,
-            warmup_ratio = 0.1,
-            num_train_epochs = 3,
-            fp16 = not torch.cuda.is_bf16_supported(),
-            bf16 = torch.cuda.is_bf16_supported(),
-            logging_steps = 1,
-            optim = "adamw_8bit",
-            seed = 42,
-            output_dir = training_args.output_dir,
-        ),
-        train_dataset = train_data,
-        tokenizer = tokenizer,
-        max_length = 1024,
-        max_prompt_length = 512,
+        model,
+        beta=0.1,  # DPO temperature parameter
+        train_dataset=train_data,
+        tokenizer=tokenizer,
+        args=training_args,
     )
     dpo_trainer.train()
     dpo_trainer.save_model(training_args.output_dir)
