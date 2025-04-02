@@ -244,8 +244,8 @@ def train():
         model = model,
         ref_model = None,
         args = TrainingArguments(
-            per_device_train_batch_size = 4,
-            gradient_accumulation_steps = 8,
+            per_device_train_batch_size = 8,
+            gradient_accumulation_steps = 16,
             warmup_ratio = 0.1,
             num_train_epochs = 3,
             fp16 = not torch.cuda.is_bf16_supported(),
@@ -262,12 +262,6 @@ def train():
         max_length = 1024,
         max_prompt_length = 512,
     )
-    dpo_trainer.train()
-
-    
-
-    # Start training
-    print("Starting DPO training...")
     dpo_trainer.train()
     dpo_trainer.save_model(training_args.output_dir)
 
