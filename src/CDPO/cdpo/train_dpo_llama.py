@@ -19,6 +19,7 @@ from trl import DPOTrainer
 from utils.prompter import Prompter
 from dataclasses import dataclass, field
 import numpy as np
+import unsloth
 from unsloth import FastLanguageModel, PatchDPOTrainer
 
 PatchDPOTrainer()
@@ -32,7 +33,6 @@ class ModelArguments:
     lora_target_modules: str = field(default='["q_proj","v_proj"]')
     # New argument: path to the local LoRA fine-tuned weights
     local_lora_weights_path: str = field(default="./././data/checkpoints/llama-sft/checkpoints-1158")  # Path to the local LoRA weights
-    merged_model_path: str = field(default="./././data/checkpoints/merged_model")  # Path to save the merged model
 
 @dataclass
 class DataArguments:
@@ -61,6 +61,7 @@ class TrainingArguments(transformers.TrainingArguments):
     max_length: int = field(default=2048)
     loss_type: str = field(default="sigmoid")  # sigmoid or hinge
     val_set_size: int = field(default=500)
+    merged_model_path: str = field(default="./././data/checkpoints/merged_model")  # Path to save the merged model
 
 def train():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
