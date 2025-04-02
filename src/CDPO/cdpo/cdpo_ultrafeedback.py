@@ -11,6 +11,7 @@ from typing import List, Dict
 import torch
 from transformers import TrainingArguments
 from trl import DPOTrainer
+from trl import DPOTrainingArguments
 from datasets import load_dataset
 from unsloth import FastLanguageModel, PatchDPOTrainer
 
@@ -273,7 +274,7 @@ def train_model(data):
     dpo_trainer = DPOTrainer(
         model=model,
         ref_model=None,
-        args=TrainingArguments(
+        args=DPOTrainingArguments(
             per_device_train_batch_size=4,
             gradient_accumulation_steps=8,
             warmup_ratio=0.1,

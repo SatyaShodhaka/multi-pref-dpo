@@ -14,8 +14,6 @@ from transformers import (
     AutoTokenizer,
     HfArgumentParser
 )
-from trl import DPOTrainer
-
 from utils.prompter import Prompter
 from dataclasses import dataclass, field
 import numpy as np
@@ -255,7 +253,6 @@ def train():
             seed = 42,
             output_dir = training_args.output_dir,
         ),
-        beta = 0.1,
         train_dataset = train_data,
         tokenizer = tokenizer,
         max_length = 1024,
