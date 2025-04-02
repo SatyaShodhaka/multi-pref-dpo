@@ -136,14 +136,14 @@ def train():
     tokenizer.padding_side = "left"
 
     # Load local LoRA fine-tuned model
-    lora_model = PeftModel.from_pretrained(model, model_args.local_lora_weights_path, assign=True).to(device)
+    #lora_model = PeftModel.from_pretrained(model, model_args.local_lora_weights_path, assign=True).to(device)
     
     # Merge the local LoRA weights into the base model
-    print("Merging local LoRA weights into the base model...")
-    merged_model = lora_model.merge_and_unload()
-    merged_model.save_pretrained(training_args.merged_model_path)
-    tokenizer.save_pretrained(training_args.merged_model_path)
-    print("Merged model loaded successfully.")
+    # print("Merging local LoRA weights into the base model...")
+    # merged_model = lora_model.merge_and_unload()
+    # merged_model.save_pretrained(training_args.merged_model_path)
+    # tokenizer.save_pretrained(training_args.merged_model_path)
+    # print("Merged model loaded successfully.")
 
      # Tokenize the prompts
     def tokenize(prompt, add_eos_token=True):
