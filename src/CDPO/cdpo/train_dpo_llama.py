@@ -12,10 +12,13 @@ from transformers import (
 from utils.prompter import Prompter
 from dataclasses import dataclass, field
 import numpy as np
-from trl import DPOTrainer
-from trl import TrainningArguments
-import unsloth
+
 from unsloth import FastLanguageModel, PatchDPOTrainer
+from unsloth import is_bfloat16_supported
+PatchDPOTrainer()
+import torch
+from transformers import TrainingArguments
+from trl import DPOTrainer
 
 PatchDPOTrainer()
 
@@ -212,12 +215,7 @@ def train():
     val_data = val_data.rename_column("instruction", "prompt")
     val_data = val_data.rename_column("reject", "rejected")
 
-    from unsloth import FastLanguageModel, PatchDPOTrainer
-    from unsloth import is_bfloat16_supported
-    PatchDPOTrainer()
-    import torch
-    from transformers import TrainingArguments
-    from trl import DPOTrainer
+   
 
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name = training_args.merged_model_path, 
