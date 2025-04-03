@@ -212,50 +212,56 @@ def train():
     val_data = val_data.rename_column("instruction", "prompt")
     val_data = val_data.rename_column("reject", "rejected")
 
+    from unsloth import FastLanguageModel, PatchDPOTrainer
+    from unsloth import is_bfloat16_supported
+    PatchDPOTrainer()
+    import torch
+    from transformers import TrainingArguments
+    from trl import DPOTrainer
 
-    # Unsloth for large models
     model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name = training_args.merged_model_path,      # Local 4bit-mistral model
+        model_name = training_args.merged_model_path, 
         max_seq_length = 2048,
-        dtype = None,       # Automatically determines whether BF16 is enabled
+        dtype = None,
         load_in_4bit = True,
-        use_gradient_checkpointing = "unsloth"
     )
-
-    training_args = {
-        "num_train_epochs": 3,
-        "per_device_train_batch_size": 4,
-        "gradient_accumulation_steps": 8,
-        "learning_rate": 2e-4,
-        "optim": "adamw_8bit",
-        "weight_decay": 0.01,
-        "lr_scheduler_type": "linear",
-        "warmup_ratio": 0.1,
-        "max_grad_norm": 1.0,
-        "fp16": True,
-        "seed": 42,
-    }
-
 
     # Do model patching and add fast LoRA weights
     model = FastLanguageModel.get_peft_model(
         model,
-        r = 32,
-        target_modules = ["q_proj", "v_proj"],
-        lora_alpha = 32,
-        lora_dropout = 0,       # Supports any, but = 0 is optimized
-        bias = "none",      # Supports any, but = "none" is optimized
-        use_gradient_checkpointing = True,
+        r = 64,
+        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+                        "gate_proj", "up_proj", "down_proj",],
+        lora_alpha = 64,
+        lora_dropout = 0, # Supports any, but = 0 is optimized
+        bias = "none",    # Supports any, but = "none" is optimized
+        # [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
+        use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
         random_state = 3407,
         max_seq_length = 2048,
     )
 
     dpo_trainer = DPOTrainer(
-        model,
-        beta=0.1,  # DPO temperature parameter
-        train_dataset=train_data,
-        tokenizer=tokenizer,
-        args=training_args,
+        model = model,
+        ref_model = None,
+        args = TrainingArguments(
+            per_device_train_batch_size = 4,
+            gradient_accumulation_steps = 8,
+            warmup_ratio = 0.1,
+            num_train_epochs = 3,
+            fp16 = not is_bfloat16_supported(),
+            bf16 = is_bfloat16_supported(),
+            logging_steps = 1,
+            optim = "adamw_8bit",
+            seed = 42,
+            output_dir = "outputs",
+        ),
+        beta = 0.1,
+        train_dataset = train_data,
+        # eval_dataset = YOUR_DATASET_HERE,
+        tokenizer = tokenizer,
+        max_length = 1024,
+        max_prompt_length = 512,
     )
     dpo_trainer.train()
     dpo_trainer.save_model(training_args.output_dir)
