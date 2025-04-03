@@ -11,6 +11,7 @@ from transformers import (
 )
 from utils.prompter import Prompter
 from dataclasses import dataclass, field
+from peft import PeftModel
 import numpy as np
 
 from unsloth import FastLanguageModel, PatchDPOTrainer
@@ -91,59 +92,59 @@ def train():
     )
 
     # Initialize prompter and tokenizer
-    #prompter = Prompter(data_args.prompt_template_name)
-    # tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)
+    prompter = Prompter(data_args.prompt_template_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_args.base_model)
 
-    # tokenizer.pad_token = tokenizer.eos_token
-    # tokenizer.padding_side = "left"
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
 
-    # # Set torch backend
-    # if torch.backends.mps.is_available():
-    #     device = torch.device("mps")
-    # elif torch.cuda.is_available():
-    #     device = torch.device("cuda")
-    # else:
-    #     device = torch.device("cpu")
+    # Set torch backend
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
 
 
-    # # Nvidia A100
-    # if device.type == "cuda":
-    #     print("Using CUDA device: ", torch.cuda.get_device_name(0))
-    #     print("CUDA device count: ", torch.cuda.device_count())
-    #     #Loading the base model
-    #     model = AutoModelForCausalLM.from_pretrained(
-    #         model_args.base_model,
-    #         torch_dtype=torch.bfloat16,
-    #         attn_implementation="flash_attention_2",
-    #         device_map="auto",  
-    #     )
+    # Nvidia A100
+    if device.type == "cuda":
+        print("Using CUDA device: ", torch.cuda.get_device_name(0))
+        print("CUDA device count: ", torch.cuda.device_count())
+        #Loading the base model
+        model = AutoModelForCausalLM.from_pretrained(
+            model_args.base_model,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+            device_map="auto",  
+        )
 
-    # # Mac M1/M2    
-    # else:
-    #     print("Using CPU or MPS device: ", device)
-    #     model = AutoModelForCausalLM.from_pretrained(
-    #         model_args.base_model,
-    #         torch_dtype=torch.float32,
-    #     )
+    # Mac M1/M2    
+    else:
+        print("Using CPU or MPS device: ", device)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_args.base_model,
+            torch_dtype=torch.float32,
+        )
     
     # Pad token id
-    # tokenizer.pad_token_id = (
-    #     0  
-    # )
+    tokenizer.pad_token_id = (
+        0  
+    )
 
-    # tokenizer.padding_side = "left"
+    tokenizer.padding_side = "left"
 
     # Load local LoRA fine-tuned model
-    #lora_model = PeftModel.from_pretrained(model, model_args.local_lora_weights_path, assign=True).to(device)
+    lora_model = PeftModel.from_pretrained(model, model_args.local_lora_weights_path, assign=True).to(device)
     
-    # Merge the local LoRA weights into the base model
-    # print("Merging local LoRA weights into the base model...")
-    # merged_model = lora_model.merge_and_unload()
-    # merged_model.save_pretrained(training_args.merged_model_path)
-    # tokenizer.save_pretrained(training_args.merged_model_path)
-    # print("Merged model loaded successfully.")
+    #Merge the local LoRA weights into the base model
+    print("Merging local LoRA weights into the base model...")
+    merged_model = lora_model.merge_and_unload()
+    merged_model.save_pretrained(training_args.merged_model_path)
+    tokenizer.save_pretrained(training_args.merged_model_path)
+    print("Merged model loaded successfully.")
 
-     # Tokenize the prompts
+    #  # Tokenize the prompts
     # def tokenize(prompt, add_eos_token=True):
     #     result = tokenizer(
     #         prompt,
@@ -173,7 +174,7 @@ def train():
     #     tokenized_full_prompt = tokenize(full_prompt)
     #     return tokenized_full_prompt
 
-    data = load_dataset("json", data_files=data_args.data_path)
+    # data = load_dataset("json", data_files=data_args.data_path)
 
     # print("Data key: ", data.keys())
     # print("data column names: ", data["train"].column_names)
@@ -217,57 +218,57 @@ def train():
 
    
 
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name = training_args.merged_model_path, 
-        max_seq_length = 2048,
-        dtype = None,
-        load_in_4bit = True,
-    )
+    # model, tokenizer = FastLanguageModel.from_pretrained(
+    #     model_name = training_args.merged_model_path, 
+    #     max_seq_length = 2048,
+    #     dtype = None,
+    #     load_in_4bit = True,
+    # )
 
-    # Do model patching and add fast LoRA weights
-    model = FastLanguageModel.get_peft_model(
-        model,
-        r = 64,
-        target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
-                        "gate_proj", "up_proj", "down_proj",],
-        lora_alpha = 64,
-        lora_dropout = 0, # Supports any, but = 0 is optimized
-        bias = "none",    # Supports any, but = "none" is optimized
-        # [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
-        use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
-        random_state = 3407,
-        max_seq_length = 2048,
-    )
+    # # Do model patching and add fast LoRA weights
+    # model = FastLanguageModel.get_peft_model(
+    #     model,
+    #     r = 64,
+    #     target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
+    #                     "gate_proj", "up_proj", "down_proj",],
+    #     lora_alpha = 64,
+    #     lora_dropout = 0, # Supports any, but = 0 is optimized
+    #     bias = "none",    # Supports any, but = "none" is optimized
+    #     # [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
+    #     use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
+    #     random_state = 3407,
+    #     max_seq_length = 2048,
+    # )
 
-    dpo_trainer = DPOTrainer(
-        model = model,
-        ref_model = None,
-        args = TrainingArguments(
-            per_device_train_batch_size = 4,
-            gradient_accumulation_steps = 8,
-            warmup_ratio = 0.1,
-            num_train_epochs = 3,
-            fp16 = not is_bfloat16_supported(),
-            bf16 = is_bfloat16_supported(),
-            logging_steps = 1,
-            optim = "adamw_8bit",
-            seed = 42,
-            output_dir = "outputs",
-        ),
-        beta = 0.1,
-        train_dataset = data,
-        # eval_dataset = YOUR_DATASET_HERE,
-        tokenizer = tokenizer,
-        max_length = 1024,
-        max_prompt_length = 512,
-    )
-    dpo_trainer.train()
-    dpo_trainer.save_model(training_args.output_dir)
+    # dpo_trainer = DPOTrainer(
+    #     model = model,
+    #     ref_model = None,
+    #     args = TrainingArguments(
+    #         per_device_train_batch_size = 4,
+    #         gradient_accumulation_steps = 8,
+    #         warmup_ratio = 0.1,
+    #         num_train_epochs = 3,
+    #         fp16 = not is_bfloat16_supported(),
+    #         bf16 = is_bfloat16_supported(),
+    #         logging_steps = 1,
+    #         optim = "adamw_8bit",
+    #         seed = 42,
+    #         output_dir = "outputs",
+    #     ),
+    #     beta = 0.1,
+    #     train_dataset = data,
+    #     # eval_dataset = YOUR_DATASET_HERE,
+    #     tokenizer = tokenizer,
+    #     max_length = 1024,
+    #     max_prompt_length = 512,
+    # )
+    # dpo_trainer.train()
+    # dpo_trainer.save_model(training_args.output_dir)
 
-    # Save completion marker
-    tmp_dir = os.path.join(training_args.output_dir, "dpo.success")
-    with open(tmp_dir, 'w') as f:
-        f.write("training completed\n")
+    # # Save completion marker
+    # tmp_dir = os.path.join(training_args.output_dir, "dpo.success")
+    # with open(tmp_dir, 'w') as f:
+    #     f.write("training completed\n")
 
 if __name__ == "__main__":
     train()
