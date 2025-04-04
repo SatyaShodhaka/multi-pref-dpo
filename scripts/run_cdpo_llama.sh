@@ -6,7 +6,7 @@ python ./src/CDPO/cdpo/train_dpo_llama.py \
   --base_model meta-llama/Llama-3.2-1B-Instruct \
   --local_lora_weights_path ./data/checkpoints/llama_sft/checkpoints-1158 \
   --merged_model_path ./data/checkpoints/merged_model \
-  --val_set_size 5000 \
+  --val_set_size 500 \
   --batch_size 8 \
   --gradient_accumulation_steps 16 \
   --num_train_epochs 3 \
