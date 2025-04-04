@@ -136,8 +136,6 @@ def train():
 
     # WandB logging
     if training_args.wandb_init:
-        os.environ["WANDB_PROJECT"] = training_args.wandb_project_name
-        os.environ["WANDB_ENTITY"] = training_args.wandb_entity
 
         wandb.init(
             project="Multi Pref Alignment",                     # ✅ your project
