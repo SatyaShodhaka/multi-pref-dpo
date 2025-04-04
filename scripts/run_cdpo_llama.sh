@@ -17,4 +17,6 @@ python ./src/CDPO/cdpo/train_dpo_llama.py \
   --lora_alpha 32 \
   --eval_steps 1000 \
   --logging_steps 100 \
+  --wandb_init True \
+
 

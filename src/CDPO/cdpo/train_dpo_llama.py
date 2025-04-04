@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 # Project Utilities
 from utils.prompter import Prompter
 
+import wandb
 
 
 PatchDPOTrainer()
@@ -131,6 +132,29 @@ def train():
     val_data = val_data.rename_column("instruction", "prompt")
     val_data = val_data.rename_column("reject", "rejected")
 
+
+    # WandB logging
+    if training_args.wandb_init:
+        os.environ["WANDB_PROJECT"] = training_args.wandb_project_name
+        os.environ["WANDB_ENTITY"] = training_args.wandb_entity
+
+        wandb.init(
+            project="Multi Pref Alignment",                     # ✅ your project
+            entity="srprabhanjan-umass",                        # ✅ your team
+            config={
+                "model": model_args.base_model,
+                "beta": training_args.beta,
+                "lr": training_args.learning_rate,
+                "batch_size": training_args.per_device_train_batch_size,
+                "epochs": training_args.num_train_epochs,
+                "lora_r": model_args.lora_r,
+                "lora_alpha": model_args.lora_alpha,
+                "dataset": data_args.data_path,
+            },
+            tags=["dpo", "llama", "unsloth", "alignment"],
+            notes="Multi-preference alignment using DPO training"
+        )
+
    
 
     model, tokenizer = FastLanguageModel.from_pretrained(
@@ -174,6 +198,7 @@ def train():
             save_steps = training_args.save_steps,
             save_total_limit = training_args.save_total_limit,
             output_dir = training_args.training_output_dir,
+            report_to = ["wandb"] if training_args.wandb_init else ["none"],
         ),
         beta = 0.1,
         train_dataset = train_data,
