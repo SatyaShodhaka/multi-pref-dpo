@@ -79,6 +79,7 @@ class TrainingArguments(transformers.TrainingArguments):
     save_total_limit: int = field(default=1)
     logging_steps: int = field(default=1000)
     eval_steps: int = field(default=1000)
+    wandb_init: bool = field(default=False)
 
 def train():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
