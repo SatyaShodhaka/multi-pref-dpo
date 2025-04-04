@@ -15,4 +15,6 @@ python ./src/CDPO/cdpo/train_dpo_llama.py \
   --save_total_limit 1 \
   --lora_r 16 \
   --lora_alpha 32 \
+  --eval_steps 1000 \
+  --logging_steps 100 \
 

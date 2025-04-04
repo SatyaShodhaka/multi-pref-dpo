@@ -71,12 +71,14 @@ class TrainingArguments(transformers.TrainingArguments):
     beta: float = field(default=0.1)  # Temperature parameter for DPO loss
     max_prompt_length: int = field(default=1024)
     max_length: int = field(default=2048)
-    loss_type: str = field(default="sigmoid")  # sigmoid or hinge
     val_set_size: int = field(default=500)
     training_output_dir: str = field(default="./././data/ccheckpoints/llama_dpo/training/")  # Path to save the training output
     merged_model_path: str = field(default="./././data/checkpoints/merged_model")  # Path to save the merged model
     save_steps: int = field(default=1000)
     save_total_limit: int = field(default=1)
+    logging_steps: int = field(default=1000)
+    eval_steps: int = field(default=1000)
+
 def train():
     parser = HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, training_args = parser.parse_args_into_dataclasses()
@@ -163,9 +165,10 @@ def train():
             num_train_epochs = training_args.num_train_epochs,
             fp16 = not is_bfloat16_supported(),
             bf16 = is_bfloat16_supported(),
-            logging_steps = 100,
+            logging_steps = training_args.logging_steps,
             optim = "adamw_8bit",
             seed = 42,
+            eval_steps = training_args.eval_steps,
             evaluation_strategy = "steps",
             save_strategy = "steps",
             save_steps = training_args.save_steps,
