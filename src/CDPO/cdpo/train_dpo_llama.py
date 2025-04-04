@@ -178,42 +178,38 @@ def train():
     # print("Data key: ", data.keys())
     # print("data column names: ", data["train"].column_names)
 
-    # if training_args.val_set_size > 0:  
-    #     train_val = data["train"].train_test_split(
-    #         test_size=training_args.val_set_size, shuffle=True, seed=42
-    #     )
-    #     train_data = (
-    #         train_val["train"].shuffle().map(generate_and_tokenize_prompt)
-    #     )
-    #     val_data = (
-    #         train_val["test"].shuffle().map(generate_and_tokenize_prompt)
-    #     )
-    # else:
-    #     # Split the training data into train, test and val
-    #     print("No validation set provided, splitting the training data into train and validation sets.")
-    #     train_size = int(len(data["train"]) * 0.9)
-    #     val_size = int(len(data["train"]) * 0.1)
-    #     #test_size = int(len(data["train"]) * 0.1)
+    if training_args.val_set_size > 0:  
+        train_val = data["train"].train_test_split(
+            test_size=training_args.val_set_size, shuffle=True, seed=42
+        )
+        train_data = (
+            train_val["train"].shuffle().map()
+        )
+        val_data = (
+            train_val["test"].shuffle().map()
+        )
+    else:
+        # Split the training data into train, test and val
+        print("No validation set provided, splitting the training data into train and validation sets.")
+        train_size = int(len(data["train"]) * 0.9)
+        val_size = int(len(data["train"]) * 0.1)
 
-    #     train_data = (
-    #         data["train"].shuffle().select(range(train_size)).map(generate_and_tokenize_prompt)
-    #     )
+        train_data = (
+            data["train"].shuffle().select(range(train_size)).map()
+        )
 
-    #     val_data = (
-    #         data["train"].shuffle().select(range(train_size, train_size + val_size)).map(generate_and_tokenize_prompt)
-    #     )
-    #     # test_data = (
-    #     #     data["train"].shuffle().select(range(train_size + val_size, train_size + val_size + test_size)).map(generate_and_tokenize_prompt)   
-    #     # )
+        val_data = (
+            data["train"].shuffle().select(range(train_size, train_size + val_size)).map()
+        )
 
-    # print("Train_Data samples: ", len(train_data))
-    # print("Val_Data samples: ", len(val_data))
+    print("Train_Data samples: ", len(train_data))
+    print("Val_Data samples: ", len(val_data))
 
-    # train_data = train_data.rename_column("instruction", "prompt")
-    # train_data = train_data.rename_column("reject", "rejected")
+    train_data = train_data.rename_column("instruction", "prompt")
+    train_data = train_data.rename_column("reject", "rejected")
 
-    # val_data = val_data.rename_column("instruction", "prompt")
-    # val_data = val_data.rename_column("reject", "rejected")
+    val_data = val_data.rename_column("instruction", "prompt")
+    val_data = val_data.rename_column("reject", "rejected")
 
    
 
@@ -255,8 +251,8 @@ def train():
             output_dir = "outputs",
         ),
         beta = 0.1,
-        train_dataset = data,
-        # eval_dataset = YOUR_DATASET_HERE,
+        train_dataset = train_data,
+        eval_dataset = val_data,
         tokenizer = tokenizer,
         max_length = 1024,
         max_prompt_length = 512,
