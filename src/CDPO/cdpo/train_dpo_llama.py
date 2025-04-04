@@ -4,6 +4,13 @@ import torch
 import transformers
 from datasets import load_dataset
 import json
+import unsloth
+from unsloth import FastLanguageModel, PatchDPOTrainer
+from unsloth import is_bfloat16_supported
+PatchDPOTrainer()
+import torch
+from transformers import TrainingArguments
+from trl import DPOTrainer
 from transformers import (
     AutoModelForCausalLM, 
     AutoTokenizer,
@@ -13,12 +20,6 @@ from utils.prompter import Prompter
 from dataclasses import dataclass, field
 import numpy as np
 
-from unsloth import FastLanguageModel, PatchDPOTrainer
-from unsloth import is_bfloat16_supported
-PatchDPOTrainer()
-import torch
-from transformers import TrainingArguments
-from trl import DPOTrainer
 
 PatchDPOTrainer()
 
