@@ -14,15 +14,6 @@ from dataclasses import dataclass, field
 from peft import PeftModel
 import numpy as np
 
-from unsloth import FastLanguageModel, PatchDPOTrainer
-from unsloth import is_bfloat16_supported
-PatchDPOTrainer()
-import torch
-from transformers import TrainingArguments
-from trl import DPOTrainer
-
-PatchDPOTrainer()
-
 @dataclass
 class ModelArguments:
     base_model: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
@@ -45,9 +36,6 @@ def train():
     parser = HfArgumentParser((ModelArguments, DataArguments))
     model_args, data_args = parser.parse_args_into_dataclasses()
     model_args.lora_target_modules = json.loads(model_args.lora_target_modules)
-
-     # Get the current device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     print(
         f"Training model with DPO params:\n"
@@ -95,7 +83,6 @@ def train():
             attn_implementation="flash_attention_2",
             device_map="auto",  
         )
-        
 
     # Mac M1/M2    
     else:
