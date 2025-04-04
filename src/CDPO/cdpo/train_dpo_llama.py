@@ -4,6 +4,11 @@ PatchDPOTrainer()
 
 # Torch and NumPy
 import torch
+import transformers
+from peft import (
+    LoraConfig,
+    get_peft_model,
+)
 import numpy as np
 
 # Transformers & TRL
