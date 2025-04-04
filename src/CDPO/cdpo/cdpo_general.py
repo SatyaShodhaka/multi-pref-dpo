@@ -11,6 +11,9 @@ from transformers import TrainingArguments
 from trl import DPOTrainer
 from datasets import load_dataset
 
+import os
+os.environ['TRITON_CACHE_DIR'] = '/tmp/triton_cache'
+
 train_dataset = load_dataset("json", data_files="./././data/dpo_UltraFeedback_50k.json", split='train')
 
 
@@ -25,10 +28,10 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 # Do model patching and add fast LoRA weights
 model = FastLanguageModel.get_peft_model(
     model,
-    r = 32,
+    r = 8,
     target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
                       "gate_proj", "up_proj", "down_proj",],
-    lora_alpha = 32,
+    lora_alpha = 8,
     lora_dropout = 0,       # Supports any, but = 0 is optimized
     bias = "none",      # Supports any, but = "none" is optimized
     use_gradient_checkpointing = True,
@@ -40,8 +43,8 @@ dpo_trainer = DPOTrainer(
     model = model,
     ref_model = None,
     args = TrainingArguments(
-        per_device_train_batch_size = 4,
-        gradient_accumulation_steps = 8,
+        per_device_train_batch_size = 2,
+        gradient_accumulation_steps = 4,
         warmup_ratio = 0.1,
         num_train_epochs = 3,
         fp16 = not torch.cuda.is_bf16_supported(),
