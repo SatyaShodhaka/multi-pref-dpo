@@ -1,11 +1,16 @@
+from unsloth import FastLanguageModel, PatchDPOTrainer
+PatchDPOTrainer()
+import torch
+from transformers import TrainingArguments
+from trl import DPOTrainer
+from datasets import load_dataset
+
 import os
 import sys
-import torch
-import transformers
+
 from datasets import load_dataset
 import json
 import unsloth
-from unsloth import FastLanguageModel, PatchDPOTrainer
 from unsloth import is_bfloat16_supported
 PatchDPOTrainer()
 import torch
@@ -38,7 +43,7 @@ class DataArguments:
     data_path: str = field(default="ultrafeedback_dpo.jsonl")  # Changed to DPO format
     prompt_template_name: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
     add_eos_token: bool = field(default=False)
-    cutoff_len: int = field(default=8192)
+    cutoff_len: int = field(default=1024)
 
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):

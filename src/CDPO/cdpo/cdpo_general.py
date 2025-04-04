@@ -11,12 +11,12 @@ from transformers import TrainingArguments
 from trl import DPOTrainer
 from datasets import load_dataset
 
-train_dataset = load_dataset("json", data_files="demo.json", split='train')
+train_dataset = load_dataset("json", data_files="./././data/dpo_UltraFeedback_50k.json", split='train')
 
 
 # Unsloth for large models
 model, tokenizer = FastLanguageModel.from_pretrained(
-    model_name = "/home/model",      # Local 4bit-mistral model
+    model_name = "./././data/checkpoints/merged_model",      # Local 4bit-mistral model
     max_seq_length = 2048,
     dtype = None,       # Automatically determines whether BF16 is enabled
     load_in_4bit = True,
@@ -25,10 +25,10 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 # Do model patching and add fast LoRA weights
 model = FastLanguageModel.get_peft_model(
     model,
-    r = 64,
+    r = 32,
     target_modules = ["q_proj", "k_proj", "v_proj", "o_proj",
                       "gate_proj", "up_proj", "down_proj",],
-    lora_alpha = 64,
+    lora_alpha = 32,
     lora_dropout = 0,       # Supports any, but = 0 is optimized
     bias = "none",      # Supports any, but = "none" is optimized
     use_gradient_checkpointing = True,
