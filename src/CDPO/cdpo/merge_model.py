@@ -64,11 +64,9 @@ def train():
     tokenizer = AutoTokenizer.from_pretrained(
             model_args.base_model,
         )
-    tokenizer.pad_token_id = (
-        0  
-    )
+    tokenizer.pad_token = tokenizer.eos_token
 
-    tokenizer.padding_side = "left"  
+    tokenizer.padding_side = "right"  
 
     # Loading the base model
 

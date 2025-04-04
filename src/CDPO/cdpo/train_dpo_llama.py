@@ -1,29 +1,32 @@
-from unsloth import FastLanguageModel, PatchDPOTrainer
+# Patch Unsloth DPO Trainer
+from unsloth import FastLanguageModel, PatchDPOTrainer, is_bfloat16_supported
 PatchDPOTrainer()
-import torch
-from transformers import TrainingArguments
-from trl import DPOTrainer
-from datasets import load_dataset
 
-import os
-import sys
-
-from datasets import load_dataset
-import json
-import unsloth
-from unsloth import is_bfloat16_supported
-PatchDPOTrainer()
+# Torch and NumPy
 import torch
-from transformers import TrainingArguments
-from trl import DPOTrainer
+import numpy as np
+
+# Transformers & TRL
 from transformers import (
-    AutoModelForCausalLM, 
+    AutoModelForCausalLM,
     AutoTokenizer,
+    TrainingArguments,
     HfArgumentParser
 )
-from utils.prompter import Prompter
+from trl import DPOTrainer
+
+# Datasets
+from datasets import load_dataset
+
+# Standard Library
+import os
+import sys
+import json
 from dataclasses import dataclass, field
-import numpy as np
+
+# Project Utilities
+from utils.prompter import Prompter
+
 
 
 PatchDPOTrainer()
