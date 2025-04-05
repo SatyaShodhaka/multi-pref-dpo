@@ -200,12 +200,9 @@ def train():
             torch_dtype=torch.float32,
         )
     
-    # Pad token id
-    tokenizer.pad_token_id = (
-        0  
-    )
-
-    tokenizer.padding_side = "left"  
+    # Padding token
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "right"  # Pad on the right side
 
 
     # Tokenize the prompts
