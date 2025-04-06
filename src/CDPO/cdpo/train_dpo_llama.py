@@ -35,8 +35,6 @@ from utils.prompter import Prompter
 import wandb
 
 
-PatchDPOTrainer()
-
 @dataclass
 class ModelArguments:
     base_model: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
@@ -50,7 +48,7 @@ class ModelArguments:
 @dataclass
 class DataArguments:
     data_path: str = field(default="ultrafeedback_dpo.jsonl")  # Changed to DPO format
-    prompt_template_name: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
+    prompt_template_name: str = field(default="llama_1b_instruct")
     add_eos_token: bool = field(default=False)
     cutoff_len: int = field(default=1024)
 
@@ -97,18 +95,31 @@ def train():
 
     data = load_dataset("json", data_files=data_args.data_path)
 
-    # print("Data key: ", data.keys())
-    # print("data column names: ", data["train"].column_names)
+    prompter = Prompter(data_args.prompt_template_name, verbose=False)
+
+    # Generate the prompt and tokenize it
+    def generate_prompt(data_point):
+        full_prompt = prompter.generate_prompt(
+            data_point["prompt"],
+            data_point["chosen"],
+            data_point["rejected"],
+        )
+    
+        return full_prompt
+    
+    #Rename the columns to match the expected format
+    train_data = train_data.rename_column("instruction", "prompt")
+    train_data = train_data.rename_column("reject", "rejected")
 
     if training_args.val_set_size > 0:  
         train_val = data["train"].train_test_split(
             test_size=training_args.val_set_size, shuffle=True, seed=42
         )
         train_data = (
-            train_val["train"].shuffle().map()
+            train_val["train"].shuffle().map(generate_prompt)
         )
         val_data = (
-            train_val["test"].shuffle().map()
+            train_val["test"].shuffle().map(generate_prompt)
         )
     else:
         # Split the training data into train, test and val
@@ -117,29 +128,27 @@ def train():
         val_size = int(len(data["train"]) * 0.1)
 
         train_data = (
-            data["train"].shuffle().select(range(train_size)).map()
+            data["train"].shuffle().select(range(train_size)).map(generate_prompt)
         )
 
         val_data = (
-            data["train"].shuffle().select(range(train_size, train_size + val_size)).map()
+            data["train"].shuffle().select(range(train_size, train_size + val_size)).map(generate_prompt)
         )
 
     print("Train_Data samples: ", len(train_data))
     print("Val_Data samples: ", len(val_data))
 
-    train_data = train_data.rename_column("instruction", "prompt")
-    train_data = train_data.rename_column("reject", "rejected")
-
-    val_data = val_data.rename_column("instruction", "prompt")
-    val_data = val_data.rename_column("reject", "rejected")
+    #Randomly print 5 samples from the training data
+    for i in range(5):
+        print("Sample ", i, ": ", train_data[i])
 
 
     # WandB logging
     if training_args.wandb_init:
 
         wandb.init(
-            project="Multi Pref Alignment",                     # ✅ your project
-            entity="srprabhanjan-umass",                        # ✅ your team
+            project="Multi Pref Alignment",                     
+            entity="srprabhanjan-umass",                        
             config={
                 "model": model_args.base_model,
                 "beta": training_args.beta,
@@ -177,6 +186,8 @@ def train():
         random_state = 3407,
         max_seq_length = 2048,
     )
+
+    PatchDPOTrainer()
 
     dpo_trainer = DPOTrainer(
         model = model,
