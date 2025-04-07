@@ -108,8 +108,8 @@ def train():
         return full_prompt
     
     #Rename the columns to match the expected format
-    train_data = train_data.rename_column("instruction", "prompt")
-    train_data = train_data.rename_column("reject", "rejected")
+    data = data.rename_column("instruction", "prompt")
+    data = data.rename_column("reject", "rejected")
 
     if training_args.val_set_size > 0:  
         train_val = data["train"].train_test_split(
