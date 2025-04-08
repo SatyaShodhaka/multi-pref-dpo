@@ -30,7 +30,7 @@ git clone https://github.com/SatyaShodhaka/multi-pref-dpo
 + pstatsd==1.2.3
 + wandb==0.15.3
 + openai==0.27.8
-```
+
 
 [UltraSafety](https://huggingface.co/datasets/openbmb/UltraSafety) 
 
