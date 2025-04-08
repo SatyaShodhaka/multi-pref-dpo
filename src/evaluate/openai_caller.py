@@ -22,20 +22,6 @@ def set_seed(seed):
     np.random.seed(seed)
     random.seed(seed)
 
-from sampling import model_pool, SAMPLE_NUM
-
-
-
-model_path = {
-    "ultralm-13b": "openbmb/UltraLM-13b-v2.0",
-}
-
-system_prompt = """Your role is to evaluate text quality based on given criteria.
-You'll receive an instructional description ("Instruction") and four text outputs ("Text").
-Understand and interpret instructions to evaluate effectively.
-Provide annotations for each text with a rating and rationale.
-The four texts given are independent, and should be evaluated separately."""
-
 
 honesty_template = """# Honesty and Uncertainty Expression Assessment
 
@@ -74,14 +60,12 @@ N/A. **Not Applicable**: For creative writing tasks.
 Instruction: [Specify task goal and restrictions]
 
 Texts:
-<text 1> [Text 1]
-<text 2> [Text 2]
-<text 3> [Text 3]
-<text 4> [Text 4]
+<text>
+
 
 ### Output
-##### Output for Text 1
-Rating: [Rating for text 1]
+##### Output for Text 
+Rating: [Rating for text]
 Rationale: [Rationale for the rating in short sentences]
 
 ##### Output for Text 2
@@ -105,10 +89,6 @@ Instruction: {instruction}
 
 Texts:
 <text 1> {text_1}
-<text 2> {text_2}
-<text 3> {text_3}
-<text 4> {text_4}
-
 ### Output
 """
 

@@ -5,6 +5,7 @@ import os
 import torch
 import transformers
 import datasets
+import json
 from datasets import load_dataset
 from transformers import (
     AutoModelForCausalLM,
@@ -14,22 +15,23 @@ from transformers import (
 
 from dataclasses import dataclass, field
 from transformers import TrainingArguments
-from CPSFT.cpsft.utils.prompter import Prompter
+from utils.prompter import Prompter
 from tqdm import tqdm
+from peft import PeftModel
 
 @dataclass
 class ModelArguments:
-    model_path: str = field(default="./././data/checkpoints/merged_model")
-    dpo_lora_weights_path: str = field(default="./././data/checkpoints/llama-dpo")
+    base_model: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
+    model_path: str = field(default="/Users/satyashodhaka/Desktop/Projects/multi-pref-dpo/data/checkpoints/merged_model")
+    dpo_lora_weights_path: str = field(default="/Users/satyashodhaka/Desktop/Projects/multi-pref-dpo/data/checkpoints/llama_dpo/weights")
 
 
 @dataclass
 class DataArguments:
-    data_path: str = field(default="ultrafeedback_dpo.jsonl")
-    prompt_template_name: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
+    data_path: str = field(default="/Users/satyashodhaka/Desktop/Projects/multi-pref-dpo/data/dpo_UltraFeedback_50k.json")
     add_eos_token: bool = field(default=False)
     cutoff_len: int = field(default=8192)
-    prompt_template_name: str = field(default="llama-3.2-1B-Instruct")
+    prompt_template_name: str = field(default="llama_1b_instruct")
 
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
@@ -37,9 +39,11 @@ class TrainingArguments(transformers.TrainingArguments):
 
 
 def evaluate_results(generated_response, actual_response):
-    # Implement your evaluation logic here
-    # For example, you can use BLEU score, ROUGE score, etc.
-    # This is a placeholder for demonstration purposes
+    # Call OpenAI API to evaluate the generated response
+
+
+
+
     return generated_response == actual_response
 
 def run_eval():
@@ -56,7 +60,7 @@ def run_eval():
 
     train_test = data["train"].train_test_split(
             test_size=training_args.test_set_size, shuffle=True, seed=42
-        )
+    )
 
 
     # Load the model and tokenizer
@@ -91,7 +95,7 @@ def run_eval():
         )
 
     # Load local lora weights
-    lora_model = AutoModelForCausalLM.from_pretrained(model,
+    lora_model = PeftModel.from_pretrained(model,
         model_args.dpo_lora_weights_path,
     )
 
@@ -121,41 +125,30 @@ def run_eval():
 
     # Generate the prompt and tokenize it
     def generate_and_tokenize_prompt(data_point):
-        full_prompt = prompter.generate_prompt(
-            data_point["instruction"],
-            data_point["input"],
-            data_point["output"],
-        )  
+        full_prompt = prompter.generate_prompt(data_point["instruction"])  
         tokenized_full_prompt = tokenize(full_prompt)
-        if not data_args.train_on_inputs:
-            user_prompt = prompter.generate_prompt(
-                data_point["instruction"], data_point["input"]
-            )
-            tokenized_user_prompt = tokenize(
-                user_prompt, add_eos_token=data_args.add_eos_token
-            )
-            user_prompt_len = len(tokenized_user_prompt["input_ids"])
 
-            if data_args.add_eos_token:
-                user_prompt_len -= 1
-            
-            tokenized_full_prompt["labels"] = [-100] * user_prompt_len + tokenized_full_prompt["labels"][user_prompt_len:]
-        return tokenized_full_prompt
-    
+        input_ids = torch.tensor(tokenized_full_prompt["input_ids"]).unsqueeze(0).to(device)
+        attention_mask = torch.tensor(tokenized_full_prompt["attention_mask"]).unsqueeze(0).to(device)
+
+        return {"input_ids": input_ids, "attention_mask": attention_mask}
+
     # Tokenize the dataset
     test_data = (
         train_test["test"]
         .shuffle()
-        .map()
     )
 
+    print("Test_Data samples: ", len(test_data))
+
+
     # Results
-    res_pairs = []
+    output_records = []
 
     for sample in tqdm(test_data):
 
         # Generate and tokenize the prompt
-        inputs = generate_and_tokenize_prompt(sample["instruction"])
+        inputs = generate_and_tokenize_prompt(sample)
 
         # Inference
         with torch.no_grad():
@@ -170,16 +163,20 @@ def run_eval():
         
         # Decode
         generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        
-        res_pairs.append((generated_text, sample["chosen"]))
+        output_record = {
+            "instruction": sample["instruction"],
+            "chosen": sample["chosen"],
+            "generated": generated_text
+        }
+        output_records.append(output_record)
 
 
-    # Call the evaluation function
-    for generated_response, actual_response in res_pairs:
-        evaluation_result = evaluate_results(generated_response, actual_response)
-        print(f"Generated: {generated_response}\nActual: {actual_response}\nEvaluation Result: {evaluation_result}\n")
-        
+    # Save the output to a JSON file
+    output_path = "evaluation_results.json"  # You can also make this a CLI argument
+    with open(output_path, "w") as f:
+        json.dump(output_records, f, indent=4)
 
+    print(f"Saved evaluation results to {output_path}")
 
 
 

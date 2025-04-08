@@ -100,7 +100,7 @@ def train():
     tokenizer.save_pretrained(model_args.merged_model_path)
     print("Merged model loaded successfully.")
 
-    inputs = tokenizer("Hello, how are you?", return_tensors="pt").to("cuda")
+    inputs = tokenizer("Hello, how are you?", return_tensors="pt")
     outputs = merged_model.generate(**inputs, max_new_tokens=50)
     print(tokenizer.decode(outputs[0]))
     print("Merged model saved successfully.")
