@@ -22,13 +22,13 @@ from peft import PeftModel
 @dataclass
 class ModelArguments:
     base_model: str = field(default="meta-llama/Llama-3.2-1B-Instruct")
-    model_path: str = field(default="/Users/satyashodhaka/Desktop/Projects/multi-pref-dpo/data/checkpoints/merged_model")
-    dpo_lora_weights_path: str = field(default="/Users/satyashodhaka/Desktop/Projects/multi-pref-dpo/data/checkpoints/llama_dpo/weights")
+    model_path: str = field(default="././data/checkpoints/merged_model")
+    dpo_lora_weights_path: str = field(default="././data/checkpoints/llama_dpo/weights")
 
 
 @dataclass
 class DataArguments:
-    data_path: str = field(default="/Users/satyashodhaka/Desktop/Projects/multi-pref-dpo/data/dpo_UltraFeedback_50k.json")
+    data_path: str = field(default="././data/dpo_UltraFeedback_50k.json")
     add_eos_token: bool = field(default=False)
     cutoff_len: int = field(default=8192)
     prompt_template_name: str = field(default="llama_1b_instruct")
@@ -40,10 +40,6 @@ class TrainingArguments(transformers.TrainingArguments):
 
 def evaluate_results(generated_response, actual_response):
     # Call OpenAI API to evaluate the generated response
-
-
-
-
     return generated_response == actual_response
 
 def run_eval():
