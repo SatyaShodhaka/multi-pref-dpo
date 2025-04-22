@@ -160,8 +160,9 @@ def run_eval():
             )
         
         # Decode
-        generated_ids = outputs[0][input_ids.shape[1]:] # Ignore prompt
+        generated_ids = outputs.squences[0]
         generated_text = tokenizer.decode(generated_ids, skip_special_tokens=True)
+        cleaned_text = prompter.get_response(generated_text) 
         output_record = {
             "instruction": sample["instruction"],
             "chosen": sample["chosen"],

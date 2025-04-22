@@ -99,7 +99,7 @@ def train():
 
     # Generate the prompt and tokenize it
     def generate_prompt(data_point):
-        full_prompt = prompter.generate_prompt(
+        full_prompt = prompter.generate_prompt_dpo(
             data_point["prompt"],
             data_point["chosen"],
             data_point["rejected"],
@@ -138,9 +138,6 @@ def train():
     print("Train_Data samples: ", len(train_data))
     print("Val_Data samples: ", len(val_data))
 
-    #Randomly print 5 samples from the training data
-    for i in range(5):
-        print("Sample ", i, ": ", train_data[i])
 
 
     # WandB logging

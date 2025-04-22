@@ -136,7 +136,7 @@ def train():
 
     parser = transformers.HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
     model_args, data_args, train_args = parser.parse_args_into_dataclasses()
-    train_args.eval_strategy = "steps" #if train_args.val_set_size > 0 else "no"
+    train_args.eval_strategy = "steps" if train_args.val_set_size > 0 else "no"
 
     print("training_args eval: ", train_args.eval_strategy)
     model_args.lora_target_modules = json.loads(model_args.lora_target_modules)
@@ -180,7 +180,9 @@ def train():
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
-    # Nvidia A100
+
+
+    # Load the model to the appropriate device
     if device.type == "cuda":
         print("Using CUDA device: ", torch.cuda.get_device_name(0))
         print("CUDA device count: ", torch.cuda.device_count())
@@ -202,7 +204,7 @@ def train():
     
     # Padding token
     tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right"  # Pad on the right side
+    tokenizer.padding_side = "right"  # Pad on the right/left side based on your model
 
 
     # Tokenize the prompts

@@ -15,7 +15,7 @@ class Prompter(object):
         if not template_name:
             # Enforce the default here, so the constructor can be called with '' and will not break.
             template_name = "alpaca"
-        file_name = osp.join("./src/CPSFT/cpsft/templates", f"{template_name}.json")
+        file_name = osp.join("./src/CDPO/cdpo/templates", f"{template_name}.json")
         if not osp.exists(file_name):
             raise ValueError(f"Can't read {file_name}")
         with open(file_name) as fp:
@@ -46,6 +46,22 @@ class Prompter(object):
         if self._verbose:
             print(res)
         return res
+    
+    def generate_prompt_dpo(
+        self,
+        prompt: str,
+        chosen: Union[None, str] = None,
+        rejected: Union[None, str] = None,
+    ) -> str:
+        
+        prompt = self.template["prompt_no_input"].format(
+            instruction=prompt
+        )
+        return {
+            "prompt": prompt,
+            "chosen": chosen,
+            "rejected": rejected
+        }
 
     def get_response(self, output: str) -> str:
         return output.split(self.template["response_split"])[-1].strip()
